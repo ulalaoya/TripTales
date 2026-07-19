@@ -1,0 +1,21 @@
+{
+  "name": "TripTales — יומן המסע המשפחתי",
+  "short_name": "TripTales",
+  "description": "יומן מסע משפחתי מודרני",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f7fb",
+  "theme_color": "#ff6b66",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

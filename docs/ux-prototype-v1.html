@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ff6b66">
+  <title>TripTales - אבטיפוס משפחתי</title>
+  <style>
+    :root {
+      --coral: #ff6b66;
+      --coral-soft: #fff0ee;
+      --sea: #42b8d4;
+      --sea-soft: #e9f9fc;
+      --sun: #f5bd4d;
+      --lilac: #8b80db;
+      --ink: #20243a;
+      --muted: #7d8397;
+      --line: #e9ebf2;
+      --paper: #ffffff;
+      --canvas: #f4f7fb;
+      --success: #3dbd86;
+      --danger: #ee5d70;
+      --radius: 22px;
+      --space: 1;
+      --font-scale: 1;
+      --shadow-strength: 1;
+      --phone-width: 390px;
+      --shadow: 0 18px 52px rgba(37, 46, 75, calc(.12 * var(--shadow-strength)));
+      --shadow-card: 0 8px 24px rgba(37, 46, 75, calc(.08 * var(--shadow-strength)));
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 12%, rgba(66,184,212,.13), transparent 28%),
+        radial-gradient(circle at 88% 7%, rgba(255,107,102,.11), transparent 24%),
+        var(--canvas);
+      font-family: Assistant, "Segoe UI", Arial, sans-serif;
+      font-size: calc(16px * var(--font-scale));
+    }
+    button, input, select, textarea { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid rgba(66,184,212,.32);
+      outline-offset: 2px;
+    }
+    .hidden { display: none !important; }
+    .icon { width: 21px; height: 21px; stroke: currentColor; stroke-width: 1.9; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .icon.sm { width: 17px; height: 17px; }
+    .icon.lg { width: 26px; height: 26px; }
+
+    .studio {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(250px, 300px) minmax(430px, 1fr) minmax(255px, 310px);
+      gap: 22px;
+      padding: 22px;
+      direction: ltr;
+    }
+    .panel {
+      direction: rtl;
+      background: rgba(255,255,255,.84);
+      border: 1px solid rgba(255,255,255,.9);
+      border-radius: 28px;
+      box-shadow: 0 16px 48px rgba(43,55,87,.08);
+      backdrop-filter: blur(16px);
+      overflow: hidden;
+    }
+    .panel-scroll { height: calc(100vh - 44px); overflow: auto; scrollbar-width: thin; }
+    .side-head { padding: 22px 22px 16px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: rgba(255,255,255,.96); z-index: 4; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center;
+      color: #fff; background: linear-gradient(145deg, var(--coral), #ff8b72); box-shadow: 0 9px 20px rgba(255,107,102,.25);
+    }
+    .brand h1 { font-size: 20px; line-height: 1; margin: 0 0 5px; letter-spacing: -.5px; }
+    .brand p { font-size: 11px; margin: 0; color: var(--muted); }
+    .eyebrow { font-size: 11px; color: var(--coral); font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+    .panel-section { padding: 18px 20px; border-bottom: 1px solid var(--line); }
+    .panel-section:last-child { border-bottom: 0; }
+    .panel-section h2 { font-size: 13px; margin: 0 0 12px; }
+    .panel-note { font-size: 11px; line-height: 1.55; color: var(--muted); margin: 8px 0 0; }
+
+    .screen-list { display: grid; gap: 7px; }
+    .screen-link {
+      width: 100%; border: 0; background: transparent; border-radius: 14px; padding: 10px 11px;
+      display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: right; transition: .2s ease;
+    }
+    .screen-link:hover { background: var(--canvas); }
+    .screen-link.active { color: var(--coral); background: var(--coral-soft); font-weight: 750; }
+    .screen-link .num { margin-inline-start: auto; font-size: 10px; color: var(--muted); }
+
+    .direction-grid { display: grid; gap: 9px; }
+    .direction-card {
+      border: 1px solid var(--line); background: #fff; border-radius: 17px; padding: 10px; cursor: pointer; text-align: right;
+      transition: .2s ease; position: relative;
+    }
+    .direction-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-card); }
+    .direction-card.active { border-color: var(--coral); box-shadow: 0 0 0 3px var(--coral-soft); }
+    .direction-card strong { display: block; font-size: 12px; margin-top: 8px; }
+    .direction-card p { margin: 3px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .recommended { position: absolute; top: 8px; left: 8px; font-size: 8px; color: var(--coral); background: var(--coral-soft); padding: 3px 6px; border-radius: 999px; font-weight: 800; }
+    .mini-ui { height: 64px; border-radius: 11px; overflow: hidden; background: #f7f8fb; position: relative; }
+    .mini-ui.a { display:grid; grid-template-columns: 1.4fr .8fr; gap:4px; padding:5px; }
+    .mini-ui.a::before { content:""; background: linear-gradient(145deg,#ffd0c9,#7ed4e5); border-radius:8px; }
+    .mini-ui.a::after { content:""; background:linear-gradient(#fff 0 34%,#e9ebf2 34% 42%,#fff 42%); border-radius:8px; box-shadow: inset 0 0 0 1px #eceef3; }
+    .mini-ui.b { background: #e5f6f3; }
+    .mini-ui.b::before { content:""; position:absolute; inset:8px; border-radius:10px; background: radial-gradient(circle at 28% 35%,#ffb94c 0 5px,transparent 6px), radial-gradient(circle at 70% 68%,#1ba59c 0 5px,transparent 6px), linear-gradient(28deg,transparent 46%,#1ba59c 47% 50%,transparent 51%); }
+    .mini-ui.c { background:#fff7ee; transform: rotate(-.7deg); }
+    .mini-ui.c::before,.mini-ui.c::after { content:"";position:absolute;width:40%;height:70%;top:10px;border:5px solid #fff;box-shadow:0 4px 9px #d7ccd0; }
+    .mini-ui.c::before { right:15px;background:#ffc3bd;transform:rotate(5deg); }
+    .mini-ui.c::after { left:15px;background:#a6deea;transform:rotate(-5deg); }
+
+    .stage { direction: rtl; min-width: 0; }
+    .stage-top {
+      min-height: 78px; padding: 14px 22px; display:flex; align-items:center; gap:14px; justify-content:space-between;
+    }
+    .stage-title h2 { margin:0 0 3px; font-size:17px; }
+    .stage-title p { margin:0; color:var(--muted); font-size:11px; }
+    .stage-actions { display:flex; align-items:center; gap:8px; }
+    .view-toggle { display:flex; padding:4px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+    .view-btn,.icon-btn {
+      border:0; background:transparent; cursor:pointer; display:grid; place-items:center; border-radius:9px; min-width:34px; min-height:34px;
+    }
+    .view-btn.active { background:var(--coral-soft); color:var(--coral); }
+    .icon-btn.soft { background:var(--canvas); }
+    .stage-canvas {
+      min-height: calc(100vh - 144px); padding: 18px 22px 28px; display:flex; align-items:flex-start; justify-content:center; overflow:auto;
+      background-image: radial-gradient(#dce2ee 1px,transparent 1px); background-size:20px 20px;
+    }
+    .phone {
+      width: var(--phone-width); max-width: 100%; height: min(808px, calc(100vh - 126px)); min-height: 660px;
+      background: var(--paper); border: 9px solid #fff; border-radius: 42px; box-shadow: 0 22px 70px rgba(31,41,70,.18), 0 0 0 1px rgba(31,41,70,.06);
+      overflow: hidden; position: relative; transition: width .25s ease, border-radius .25s ease;
+    }
+    .phone::before {
+      content:""; position:absolute; z-index:20; top:7px; left:50%; transform:translateX(-50%); width:86px; height:23px; border-radius:999px; background:#172033;
+    }
+    .statusbar { height:38px; display:flex; align-items:center; justify-content:space-between; padding:10px 21px 0; font-size:10px; font-weight:750; position:absolute; top:0; left:0; right:0; z-index:18; pointer-events:none; }
+    .status-icons { display:flex; gap:4px; align-items:center; direction:ltr; }
+    .app-viewport { position:absolute; inset:0; overflow:hidden; border-radius:33px; background:#fff; }
+    .screen { position:absolute; inset:0; overflow:auto; padding:46px 16px 96px; display:none; background:#fff; scrollbar-width:none; animation:screenIn .24s ease both; }
+    .screen::-webkit-scrollbar { display:none; }
+    .screen.active { display:block; }
+    @keyframes screenIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+    .app-header { display:flex; align-items:center; gap:10px; min-height:43px; margin-bottom:12px; }
+    .app-header h2 { margin:0; font-size:21px; letter-spacing:-.5px; }
+    .app-header .sub { font-size:11px; color:var(--muted); margin-top:2px; }
+    .avatar {
+      width:40px; height:40px; border-radius:14px; display:grid; place-items:center; color:#fff; font-weight:850; font-size:13px;
+      background:linear-gradient(145deg,var(--lilac),#b09de7); border:3px solid #fff; box-shadow:0 4px 12px rgba(66,74,120,.16);
+    }
+    .avatar.sm { width:30px; height:30px; border-radius:10px; font-size:10px; border-width:2px; }
+    .avatar.xs { width:25px; height:25px; border-radius:8px; font-size:9px; border-width:2px; }
+    .avatar.coral { background:linear-gradient(145deg,var(--coral),#ff9a78); }
+    .avatar.sea { background:linear-gradient(145deg,var(--sea),#67d3bd); }
+    .avatar.sun { background:linear-gradient(145deg,var(--sun),#f19845); }
+    .head-spacer { margin-inline-start:auto; }
+    .action-round { width:38px; height:38px; border:1px solid var(--line); background:#fff; border-radius:14px; display:grid; place-items:center; cursor:pointer; box-shadow:0 5px 15px rgba(32,36,58,.05); }
+    .section-row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:17px 0 9px; }
+    .section-row h3 { margin:0; font-size:15px; }
+    .text-btn { border:0; background:transparent; color:var(--coral); font-size:11px; font-weight:750; cursor:pointer; }
+
+    .photo { background-image:url('assets/trip-photos.png'); background-repeat:no-repeat; background-size:200% 200%; background-color:#d7e7ea; }
+    .photo.p1 { background-position:0 0; }
+    .photo.p2 { background-position:100% 0; }
+    .photo.p3 { background-position:0 100%; }
+    .photo.p4 { background-position:100% 100%; }
+    .hero-card { min-height:235px; border-radius:calc(var(--radius) + 4px); overflow:hidden; position:relative; box-shadow:var(--shadow); color:#fff; }
+    .hero-card::after { content:""; position:absolute; inset:0; background:linear-gradient(to top,rgba(17,27,44,.78),rgba(17,27,44,.03) 68%); }
+    .hero-tools { position:absolute; z-index:2; inset:13px 13px auto; display:flex; justify-content:space-between; }
+    .glass-pill { display:flex; align-items:center; gap:6px; padding:7px 10px; border-radius:999px; background:rgba(255,255,255,.88); color:var(--ink); font-size:10px; font-weight:750; backdrop-filter:blur(7px); }
+    .hero-copy { position:absolute; z-index:2; right:16px; left:16px; bottom:15px; }
+    .hero-copy h3 { font-size:23px; margin:0 0 4px; letter-spacing:-.6px; }
+    .hero-copy p { margin:0 0 11px; font-size:11px; opacity:.9; }
+    .hero-meta { display:flex; align-items:center; justify-content:space-between; }
+    .avatar-stack { display:flex; padding-right:8px; }
+    .avatar-stack .avatar { margin-right:-8px; }
+    .progress-pill { font-size:10px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.28); padding:6px 9px; border-radius:999px; }
+
+    .quick-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    .quick {
+      border:1px solid var(--line); background:#fff; border-radius:17px; padding:11px 5px 9px; text-align:center; cursor:pointer; min-height:76px;
+      box-shadow:0 5px 14px rgba(37,46,75,.035); transition:.2s ease;
+    }
+    .quick:hover { transform:translateY(-2px); box-shadow:var(--shadow-card); }
+    .quick-icon { width:34px; height:34px; margin:0 auto 7px; display:grid; place-items:center; border-radius:12px; color:var(--coral); background:var(--coral-soft); }
+    .quick:nth-child(2) .quick-icon { color:var(--sea); background:var(--sea-soft); }
+    .quick:nth-child(3) .quick-icon { color:#a57620; background:#fff7df; }
+    .quick:nth-child(4) .quick-icon { color:var(--lilac); background:#f2efff; }
+    .quick span { font-size:10px; font-weight:700; }
+
+    .activity-row { display:grid; grid-template-columns:66px 1fr auto; gap:10px; align-items:center; padding:10px; border:1px solid var(--line); border-radius:18px; margin-bottom:8px; background:#fff; cursor:pointer; }
+    .activity-row .thumb { height:57px; border-radius:14px; }
+    .activity-row h4 { margin:0 0 4px; font-size:12px; }
+    .activity-row p { margin:0; color:var(--muted); font-size:10px; display:flex; gap:5px; align-items:center; }
+    .time { color:var(--coral); font-size:10px; font-weight:800; background:var(--coral-soft); padding:6px 8px; border-radius:999px; }
+
+    .pulse-card { padding:13px; background:linear-gradient(135deg,#fff7f3,#f3fbfd); border:1px solid #f0edf0; border-radius:20px; }
+    .pulse-top { display:flex; align-items:center; gap:8px; }
+    .pulse-top strong { font-size:12px; }
+    .pulse-top span { font-size:10px; color:var(--muted); }
+    .reaction-mini { display:flex; gap:6px; margin-top:11px; }
+    .reaction-chip { border:1px solid var(--line); background:#fff; border-radius:999px; padding:6px 8px; display:flex; align-items:center; gap:4px; font-size:10px; }
+
+    .bottom-nav { position:absolute; z-index:16; right:10px; left:10px; bottom:8px; height:70px; display:grid; grid-template-columns:repeat(5,1fr); align-items:center; background:rgba(255,255,255,.94); backdrop-filter:blur(14px); border:1px solid rgba(228,231,239,.9); border-radius:22px; box-shadow:0 10px 30px rgba(32,36,58,.12); padding:7px; }
+    .nav-btn { border:0; background:transparent; min-height:53px; border-radius:15px; color:#a3a8b7; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; }
+    .nav-btn span { font-size:8px; }
+    .nav-btn.active { color:var(--coral); background:var(--coral-soft); }
+    .nav-btn.add { width:48px; min-height:48px; border-radius:17px; color:#fff; background:linear-gradient(145deg,var(--coral),#ff8a70); margin:auto; box-shadow:0 8px 18px rgba(255,107,102,.32); transform:translateY(-7px); }
+
+    .trip-card { display:grid; grid-template-columns:105px 1fr; gap:12px; padding:9px; border:1px solid var(--line); border-radius:20px; margin-bottom:10px; background:#fff; box-shadow:0 6px 18px rgba(37,46,75,.035); }
+    .trip-card .trip-img { border-radius:15px; min-height:108px; }
+    .trip-card h3 { font-size:14px; margin:8px 0 4px; }
+    .trip-card p { color:var(--muted); font-size:10px; line-height:1.5; margin:0 0 9px; }
+    .trip-tags { display:flex; gap:5px; flex-wrap:wrap; }
+    .tag { font-size:9px; padding:5px 7px; border-radius:999px; background:var(--canvas); color:var(--muted); }
+
+    .tabs { display:flex; gap:7px; overflow:auto; padding-bottom:4px; margin:5px -2px 14px; scrollbar-width:none; }
+    .tab { white-space:nowrap; border:1px solid var(--line); background:#fff; border-radius:14px; padding:9px 12px; font-size:10px; cursor:pointer; }
+    .tab.active { background:var(--ink); color:#fff; border-color:var(--ink); }
+    .day-summary { display:flex; align-items:center; justify-content:space-between; padding:13px; background:var(--sea-soft); border-radius:18px; margin-bottom:13px; }
+    .day-summary strong { font-size:12px; display:block; }
+    .day-summary span { font-size:9px; color:var(--muted); }
+    .weather { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:800; color:#277b8d; }
+    .timeline { position:relative; }
+    .timeline::before { content:""; position:absolute; top:8px; bottom:18px; right:16px; width:2px; background:linear-gradient(var(--coral),var(--sea)); opacity:.25; }
+    .timeline-item { display:grid; grid-template-columns:34px 1fr; gap:10px; position:relative; margin-bottom:10px; }
+    .timeline-dot { width:34px; height:34px; position:relative; z-index:2; border-radius:12px; display:grid; place-items:center; background:var(--coral-soft); color:var(--coral); border:4px solid #fff; box-shadow:0 3px 8px rgba(37,46,75,.08); }
+    .timeline-item:nth-child(2) .timeline-dot { background:var(--sea-soft); color:var(--sea); }
+    .timeline-item:nth-child(3) .timeline-dot { background:#fff5da; color:#b77c19; }
+    .timeline-item:nth-child(4) .timeline-dot { background:#f1efff; color:var(--lilac); }
+    .timeline-card { border:1px solid var(--line); border-radius:18px; padding:11px; background:#fff; display:grid; grid-template-columns:1fr auto; gap:8px; }
+    .timeline-card h4 { font-size:12px; margin:0 0 3px; }
+    .timeline-card p { margin:0; color:var(--muted); font-size:9px; }
+    .drag { color:#c8ccd5; font-size:17px; letter-spacing:-2px; align-self:center; }
+    .add-card { border:1.5px dashed #d7dae3; color:var(--muted); background:#fafbfc; border-radius:18px; padding:12px; width:100%; cursor:pointer; display:flex; justify-content:center; gap:7px; align-items:center; font-size:11px; }
+
+    .detail-hero { height:260px; margin:-46px -16px 0; border-radius:0 0 30px 30px; position:relative; overflow:hidden; }
+    .detail-hero::after { content:""; position:absolute; inset:0; background:linear-gradient(to top,rgba(20,30,48,.7),transparent 68%); }
+    .detail-top { position:absolute; z-index:3; top:52px; right:15px; left:15px; display:flex; justify-content:space-between; }
+    .detail-top .action-round { background:rgba(255,255,255,.9); border:0; }
+    .detail-title { position:absolute; z-index:3; right:18px; left:18px; bottom:16px; color:#fff; }
+    .detail-title h2 { font-size:24px; margin:0 0 3px; }
+    .detail-title p { font-size:10px; margin:0; opacity:.9; display:flex; align-items:center; gap:5px; }
+    .info-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin:12px 0; }
+    .info-box { background:var(--canvas); border-radius:16px; padding:11px 6px; text-align:center; }
+    .info-box strong { font-size:11px; display:block; margin-top:5px; }
+    .info-box span { font-size:8px; color:var(--muted); }
+    .copy { font-size:11px; color:#5f6577; line-height:1.65; margin:7px 1px 12px; }
+    .family-reactions { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+    .person-reaction { text-align:center; padding:9px 2px; border:1px solid var(--line); border-radius:16px; }
+    .person-reaction .emoji { font-size:20px; display:block; margin-bottom:3px; }
+    .person-reaction span { font-size:8px; color:var(--muted); }
+
+    .map-canvas { height:510px; margin:-10px -16px 0; position:relative; overflow:hidden; background:#e8f4ed; }
+    .map-canvas svg { width:100%; height:100%; }
+    .map-pin { position:absolute; width:42px; height:42px; border-radius:15px 15px 15px 4px; transform:rotate(-45deg); background:var(--coral); display:grid; place-items:center; color:#fff; box-shadow:0 7px 18px rgba(35,67,65,.2); border:3px solid #fff; }
+    .map-pin span { transform:rotate(45deg); font-size:16px; }
+    .pin1 { top:105px; right:78px; } .pin2 { top:234px; left:86px; background:var(--sea); } .pin3 { bottom:86px; right:122px; background:var(--sun); }
+    .map-card { position:absolute; right:12px; left:12px; bottom:12px; background:rgba(255,255,255,.95); border-radius:20px; padding:10px; display:grid; grid-template-columns:74px 1fr auto; align-items:center; gap:10px; box-shadow:var(--shadow); }
+    .map-card .thumb { height:68px; border-radius:15px; }
+    .map-card h4 { font-size:12px; margin:0 0 4px; }
+    .map-card p { color:var(--muted); font-size:9px; margin:0; }
+
+    .gallery-head { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:12px; }
+    .gallery-head h2 { margin:0; font-size:22px; }
+    .gallery-head p { margin:3px 0 0; color:var(--muted); font-size:10px; }
+    .gallery { display:grid; grid-template-columns:1.15fr .85fr; grid-auto-rows:118px; gap:8px; }
+    .gallery .tile { border-radius:18px; position:relative; overflow:hidden; cursor:pointer; }
+    .gallery .tile.tall { grid-row:span 2; }
+    .gallery .tile.wide { grid-column:span 2; }
+    .gallery .tile::after { content:""; position:absolute; inset:0; background:linear-gradient(to top,rgba(23,31,48,.48),transparent 50%); opacity:.75; }
+    .tile-meta { position:absolute; z-index:2; right:10px; left:10px; bottom:9px; color:#fff; font-size:9px; display:flex; justify-content:space-between; }
+    .upload-fab { position:absolute; z-index:14; bottom:88px; left:17px; width:52px; height:52px; border:0; color:#fff; background:var(--coral); border-radius:18px; display:grid; place-items:center; box-shadow:0 9px 22px rgba(255,107,102,.34); cursor:pointer; }
+
+    .composer { background:var(--canvas); border-radius:22px; padding:13px; }
+    .dropzone { height:180px; border:1.5px dashed #cfd3dd; background:#fff; border-radius:19px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--muted); cursor:pointer; }
+    .dropzone .bubble { width:48px; height:48px; display:grid; place-items:center; border-radius:16px; color:var(--coral); background:var(--coral-soft); }
+    .dropzone strong { color:var(--ink); font-size:12px; }
+    .dropzone span { font-size:9px; }
+    .form-group { margin-top:11px; }
+    .form-group label { display:block; font-size:10px; font-weight:750; margin-bottom:6px; }
+    .input { width:100%; border:1px solid var(--line); background:#fff; border-radius:14px; padding:11px 12px; color:var(--ink); resize:none; }
+    .emoji-picker { display:flex; gap:7px; overflow:auto; padding:2px 0; }
+    .emoji-btn { min-width:39px; height:39px; border:1px solid var(--line); background:#fff; border-radius:13px; font-size:20px; cursor:pointer; }
+    .emoji-btn.selected { border-color:var(--coral); background:var(--coral-soft); transform:scale(1.06); }
+    .person-select { display:flex; gap:7px; }
+    .person-select .avatar { cursor:pointer; opacity:.45; }
+    .person-select .avatar.selected { opacity:1; box-shadow:0 0 0 3px var(--sea-soft); }
+    .primary-btn { width:100%; border:0; color:#fff; background:linear-gradient(145deg,var(--coral),#ff8b72); border-radius:16px; min-height:47px; font-weight:800; cursor:pointer; box-shadow:0 9px 19px rgba(255,107,102,.25); margin-top:13px; }
+
+    .reaction-overview { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-bottom:13px; }
+    .reaction-stat { text-align:center; padding:12px 3px; background:var(--canvas); border-radius:17px; }
+    .reaction-stat b { display:block; font-size:22px; margin-bottom:2px; }
+    .reaction-stat span { font-size:8px; color:var(--muted); }
+    .member-card { display:grid; grid-template-columns:42px 1fr auto; gap:10px; align-items:center; padding:11px; border:1px solid var(--line); border-radius:18px; margin-bottom:8px; }
+    .member-card h4 { margin:0 0 3px; font-size:12px; }
+    .member-card p { margin:0; color:var(--muted); font-size:9px; }
+    .member-emojis { font-size:16px; letter-spacing:1px; direction:ltr; }
+    .bar-chart { display:grid; gap:9px; margin-top:10px; }
+    .bar-row { display:grid; grid-template-columns:38px 1fr 24px; align-items:center; gap:8px; font-size:10px; }
+    .bar { height:8px; border-radius:999px; background:var(--canvas); overflow:hidden; }
+    .bar i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--coral),#ffb067); }
+
+    .check-head { padding:13px; border-radius:20px; background:linear-gradient(135deg,var(--sea-soft),#f5f2ff); display:flex; align-items:center; justify-content:space-between; }
+    .ring { width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:conic-gradient(var(--sea) 0 72%,#fff 72%); position:relative; }
+    .ring::before { content:""; position:absolute; inset:7px; background:#f3fbfc; border-radius:50%; }
+    .ring strong { position:relative; font-size:13px; }
+    .check-head h3 { margin:0 0 4px; font-size:15px; }
+    .check-head p { margin:0; color:var(--muted); font-size:9px; }
+    .check-group { margin-top:15px; }
+    .check-group h4 { font-size:12px; margin:0 0 7px; display:flex; align-items:center; gap:6px; }
+    .check-item { display:flex; align-items:center; gap:9px; padding:10px 8px; border-bottom:1px solid var(--line); font-size:11px; cursor:pointer; }
+    .checkbox { width:21px; height:21px; border:1.5px solid #cdd1da; border-radius:7px; display:grid; place-items:center; color:#fff; flex:0 0 auto; }
+    .check-item.done .checkbox { background:var(--success); border-color:var(--success); }
+    .check-item.done .label { color:#a2a7b3; text-decoration:line-through; }
+    .owner { margin-inline-start:auto; color:var(--muted); font-size:9px; background:var(--canvas); padding:4px 7px; border-radius:999px; }
+
+    .family-cover { height:128px; margin:-46px -16px 0; background:linear-gradient(135deg,#ffd7d1,#d6f1f5 56%,#e9e3ff); position:relative; overflow:hidden; }
+    .family-cover::before,.family-cover::after { content:""; position:absolute; border-radius:50%; border:22px solid rgba(255,255,255,.38); }
+    .family-cover::before { width:110px; height:110px; right:-34px; top:-54px; }
+    .family-cover::after { width:76px; height:76px; left:18px; bottom:-58px; }
+    .family-main { text-align:center; margin-top:-34px; position:relative; z-index:2; }
+    .family-main .avatar { margin:auto; width:74px; height:74px; border-radius:25px; font-size:24px; }
+    .family-main h2 { margin:9px 0 2px; font-size:21px; }
+    .family-main p { margin:0; color:var(--muted); font-size:10px; }
+    .family-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin:15px 0; }
+    .family-stat { border:1px solid var(--line); border-radius:17px; text-align:center; padding:11px 4px; }
+    .family-stat strong { display:block; font-size:15px; }
+    .family-stat span { font-size:8px; color:var(--muted); }
+    .settings-list { display:grid; gap:7px; }
+    .settings-row { border:1px solid var(--line); border-radius:16px; padding:11px; display:flex; align-items:center; gap:9px; background:#fff; cursor:pointer; }
+    .settings-row span { font-size:11px; }
+    .settings-row .chev { margin-inline-start:auto; color:#b6bac5; }
+
+    .icon-search { display:flex; align-items:center; gap:7px; border:1px solid var(--line); background:var(--canvas); border-radius:15px; padding:9px 11px; margin-bottom:12px; }
+    .icon-search input { border:0; outline:0; background:transparent; width:100%; font-size:11px; color:var(--ink); }
+    .icon-category { margin-bottom:17px; }
+    .icon-category h3 { font-size:12px; margin:0 0 8px; display:flex; align-items:center; justify-content:space-between; }
+    .icon-category h3 span { color:var(--muted); font-size:8px; font-weight:500; }
+    .icon-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+    .icon-token { min-height:62px; border:1px solid var(--line); background:#fff; border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; text-align:center; cursor:pointer; }
+    .icon-token b { font-size:21px; line-height:1; }
+    .icon-token span { font-size:7px; color:var(--muted); }
+
+    .state-card { padding:14px; border:1px solid var(--line); border-radius:19px; margin-bottom:9px; display:grid; grid-template-columns:42px 1fr; gap:10px; align-items:center; }
+    .state-visual { width:42px; height:42px; border-radius:15px; display:grid; place-items:center; background:var(--canvas); }
+    .state-card h4 { margin:0 0 3px; font-size:12px; }
+    .state-card p { margin:0; color:var(--muted); font-size:9px; line-height:1.45; }
+    .loader { width:22px; height:22px; border-radius:50%; border:3px solid #e3e5eb; border-top-color:var(--sea); animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .control-row { margin-bottom:14px; }
+    .control-row label { display:flex; align-items:center; justify-content:space-between; font-size:11px; margin-bottom:6px; }
+    .control-row output { color:var(--muted); font-size:9px; }
+    .control-row input[type="range"] { width:100%; accent-color:var(--coral); }
+    .color-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .color-control { border:1px solid var(--line); border-radius:14px; padding:8px; }
+    .color-control label { display:block; font-size:9px; color:var(--muted); margin-bottom:5px; }
+    .color-control input { width:100%; height:28px; border:0; border-radius:8px; padding:0; background:transparent; cursor:pointer; }
+    .select { width:100%; border:1px solid var(--line); border-radius:12px; padding:9px 10px; background:#fff; color:var(--ink); font-size:10px; }
+    .control-actions { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .control-btn { border:1px solid var(--line); background:#fff; border-radius:12px; padding:9px 6px; font-size:9px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; }
+    .control-btn.primary { background:var(--ink); border-color:var(--ink); color:#fff; }
+    .layer-tree { display:grid; gap:4px; }
+    .layer { display:flex; align-items:center; gap:7px; border-radius:10px; padding:7px; font-size:9px; }
+    .layer:hover { background:var(--canvas); }
+    .layer.child { padding-right:23px; color:var(--muted); }
+    .layer .eye { margin-inline-start:auto; cursor:pointer; }
+    .version-badge { display:flex; align-items:center; justify-content:space-between; padding:9px 10px; background:var(--canvas); border-radius:12px; font-size:9px; }
+    .version-badge b { color:var(--coral); }
+    .mobile-controls { display:none; }
+    .toast { position:absolute; z-index:30; top:48px; left:50%; transform:translate(-50%,-16px); background:#172033; color:#fff; padding:9px 13px; border-radius:999px; font-size:10px; opacity:0; pointer-events:none; transition:.25s ease; box-shadow:var(--shadow); white-space:nowrap; }
+    .toast.show { opacity:1; transform:translate(-50%,0); }
+
+    body.direction-b {
+      --coral:#1ca69d; --coral-soft:#e6f7f4; --sea:#2a7fb8; --sea-soft:#e8f4fa; --sun:#f4b63f; --lilac:#54758a;
+      --radius:17px;
+    }
+    body.direction-b .hero-card { min-height:210px; }
+    body.direction-b .hero-card.photo { background-image:none; background-color:#deefe8; }
+    body.direction-b .hero-card.photo::before { content:""; position:absolute; inset:0; background:radial-gradient(circle at 28% 33%,#f4b63f 0 6px,transparent 7px),radial-gradient(circle at 70% 66%,#1ca69d 0 7px,transparent 8px),linear-gradient(31deg,transparent 47%,rgba(28,166,157,.65) 48% 50%,transparent 51%),repeating-linear-gradient(18deg,rgba(255,255,255,.18) 0 9px,transparent 9px 22px); }
+    body.direction-b .hero-copy h3::after { content:" • מסלול חי"; font-size:11px; font-weight:600; }
+    body.direction-c {
+      --coral:#f06b88; --coral-soft:#fff0f4; --sea:#54b8ca; --sea-soft:#eaf9fb; --sun:#f2b94d; --lilac:#996fc6; --paper:#fffdf8; --canvas:#faf5ed;
+      --radius:13px;
+    }
+    body.direction-c .hero-card { transform:rotate(-.7deg); border:7px solid #fff; border-bottom-width:23px; border-radius:8px; box-shadow:0 13px 30px rgba(79,59,55,.15); }
+    body.direction-c .activity-row:nth-of-type(odd), body.direction-c .trip-card:nth-of-type(odd) { transform:rotate(.35deg); }
+    body.direction-c .quick { border-radius:10px; }
+
+    @media (max-width: 1120px) {
+      .studio { grid-template-columns:250px 1fr; }
+      .controls-panel { display:none; }
+      .mobile-controls { display:grid; }
+    }
+    @media (max-width: 760px) {
+      body { background:#fff; }
+      .studio { display:block; padding:0; min-height:100vh; }
+      .nav-panel,.stage-top { display:none; }
+      .stage,.stage-canvas { min-height:100vh; padding:0; background:#fff; }
+      .phone { width:100% !important; height:100vh; min-height:0; max-width:none; border:0; border-radius:0; box-shadow:none; }
+      .phone::before { display:none; }
+      .app-viewport { border-radius:0; }
+      .mobile-controls { display:grid; position:absolute; z-index:24; top:44px; left:12px; width:38px; height:38px; border:0; border-radius:13px; place-items:center; color:var(--ink); background:rgba(255,255,255,.9); box-shadow:var(--shadow-card); }
+      .controls-panel.open { display:block; position:fixed; z-index:60; inset:0 0 0 auto; width:min(88vw,330px); border-radius:0; box-shadow:-18px 0 50px rgba(31,41,70,.18); }
+      .controls-panel.open .panel-scroll { height:100vh; }
+    }
+  </style>
+</head>
+<body class="direction-a">
+  <div class="studio">
+    <aside class="panel nav-panel" aria-label="ניווט סטודיו">
+      <div class="panel-scroll">
+        <div class="side-head">
+          <div class="brand">
+            <div class="brand-mark" data-icon="route"></div>
+            <div><h1>TripTales</h1><p>כל טיול הוא סיפור משפחתי</p></div>
+          </div>
+        </div>
+        <section class="panel-section">
+          <div class="eyebrow">3 כיווני עיצוב</div>
+          <h2 style="margin-top:5px">בחרי שפה ויזואלית</h2>
+          <div class="direction-grid">
+            <button class="direction-card active" data-direction="a" id="direction-family-journal">
+              <span class="recommended">מומלץ</span><div class="mini-ui a"></div>
+              <strong>A. יומן משפחתי</strong><p>תמונות, תכנון ותגובות באיזון נקי ונעים.</p>
+            </button>
+            <button class="direction-card" data-direction="b" id="direction-map-first">
+              <div class="mini-ui b"></div><strong>B. מסלול והרפתקה</strong><p>מפה ותחנות במרכז, יעיל יותר בזמן הטיול.</p>
+            </button>
+            <button class="direction-card" data-direction="c" id="direction-scrapbook">
+              <div class="mini-ui c"></div><strong>C. אלבום סקראפבוק</strong><p>חווייתי ואישי יותר, מעט פחות תפעולי.</p>
+            </button>
+          </div>
+        </section>
+        <section class="panel-section">
+          <h2>מסכי המוצר</h2>
+          <div class="screen-list" id="screenList"></div>
+        </section>
+        <section class="panel-section">
+          <h2>עקרונות השפה</h2>
+          <p class="panel-note">כרטיסים בהירים, פינות רכות, צילום משפחתי במרכז, צבעוניות מדודה ואייקונים קוויים. הממשק בנוי RTL ומותאם למגע.</p>
+        </section>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <div class="stage-top">
+        <div class="stage-title"><h2 id="stageTitle">מסך הבית</h2><p id="directionLabel">כיוון A, יומן משפחתי</p></div>
+        <div class="stage-actions">
+          <div class="view-toggle" aria-label="רוחב תצוגה">
+            <button class="view-btn active" data-width="390" title="טלפון" data-icon="phone"></button>
+            <button class="view-btn" data-width="430" title="טלפון רחב" data-icon="smartphone"></button>
+            <button class="view-btn" data-width="720" title="טאבלט" data-icon="tablet"></button>
+          </div>
+          <button class="icon-btn soft" id="exportTop" title="ייצוא הגדרות" data-icon="download"></button>
+        </div>
+      </div>
+      <div class="stage-canvas">
+        <div class="phone" id="phoneFrame">
+          <div class="statusbar"><span>21:18</span><div class="status-icons"><span>▮▮▮</span><span>◖</span><span>▰</span></div></div>
+          <button class="mobile-controls" id="openControls" aria-label="פתיחת בקרות" data-icon="sliders"></button>
+          <div class="app-viewport">
+            <div class="toast" id="toast">נשמר בהצלחה</div>
+
+            <section class="screen active" id="screen-home" data-title="מסך הבית">
+              <header class="app-header">
+                <div class="avatar coral">GL</div>
+                <div><div class="sub">ערב טוב, גלי</div><h2>לאן נוסעים?</h2></div>
+                <div class="head-spacer"></div><button class="action-round" data-icon="bell" aria-label="התראות"></button>
+              </header>
+              <article class="hero-card photo p1" id="home-trip-card">
+                <div class="hero-tools"><span class="glass-pill"><span data-icon="calendar" class="i-slot"></span> 14-18 באוגוסט</span><span class="glass-pill">4 ימים</span></div>
+                <div class="hero-copy"><h3>הגליל המשפחתי שלנו</h3><p>עכו, ידפת, רקפת והמון רגעים טובים</p><div class="hero-meta"><div class="avatar-stack"><span class="avatar xs coral">ג</span><span class="avatar xs sea">ר</span><span class="avatar xs sun">ה</span><span class="avatar xs">י</span></div><span class="progress-pill">התכנון הושלם 72%</span></div></div>
+              </article>
+              <div class="section-row"><h3>גישה מהירה</h3><button class="text-btn" data-screen="planner">לכל התכנון</button></div>
+              <div class="quick-grid">
+                <button class="quick" data-screen="planner"><span class="quick-icon" data-icon="calendar"></span><span>לו״ז</span></button>
+                <button class="quick" data-screen="map"><span class="quick-icon" data-icon="map"></span><span>מסלול</span></button>
+                <button class="quick" data-screen="gallery"><span class="quick-icon" data-icon="images"></span><span>אלבום</span></button>
+                <button class="quick" data-screen="checklist"><span class="quick-icon" data-icon="check-square"></span><span>ציוד</span></button>
+              </div>
+              <div class="section-row"><h3>הבא בתור</h3><button class="text-btn" data-screen="planner">יום חמישי</button></div>
+              <div class="activity-row" data-screen="activity"><div class="thumb photo p2"></div><div><h4>הגנים הבהאיים בעכו</h4><p><span data-icon="map-pin" class="i-slot"></span> 28 דקות מהמלון</p></div><span class="time">09:30</span></div>
+              <div class="activity-row"><div class="thumb photo p4"></div><div><h4>ארוחת ערב משפחתית</h4><p><span data-icon="utensils" class="i-slot"></span> מסעדה ידידותית לילדים</p></div><span class="time">19:00</span></div>
+              <div class="section-row"><h3>הדופק המשפחתי</h3><button class="text-btn" data-screen="reactions">כל התגובות</button></div>
+              <div class="pulse-card"><div class="pulse-top"><span class="avatar sm sea">ר</span><div><strong>רוני סימנה את עכו בתור 🤩</strong><br><span>לפני 8 דקות</span></div></div><div class="reaction-mini"><span class="reaction-chip">🤩 5</span><span class="reaction-chip">❤️ 4</span><span class="reaction-chip">😋 3</span><span class="reaction-chip">📸 18</span></div></div>
+            </section>
+
+            <section class="screen" id="screen-trips" data-title="כל הטיולים">
+              <header class="app-header"><div><div class="sub">הסיפורים שלנו</div><h2>כל הטיולים</h2></div><div class="head-spacer"></div><button class="action-round" data-icon="plus"></button></header>
+              <div class="tabs"><button class="tab active">הכל</button><button class="tab">מתוכננים</button><button class="tab">הסתיימו</button><button class="tab">רעיונות</button></div>
+              <article class="trip-card" data-screen="planner"><div class="trip-img photo p1"></div><div><h3>הגליל המשפחתי שלנו</h3><p>14-18 באוגוסט · 4 משתתפים</p><div class="trip-tags"><span class="tag">בתכנון</span><span class="tag">12 אטרקציות</span><span class="tag">72%</span></div></div></article>
+              <article class="trip-card"><div class="trip-img photo p2"></div><div><h3>סופ״ש בראש הנקרה</h3><p>3-4 במאי · 3 משתתפים</p><div class="trip-tags"><span class="tag">36 תמונות</span><span class="tag">8 רגעים</span></div></div></article>
+              <article class="trip-card"><div class="trip-img photo p3"></div><div><h3>קמפינג בנחל דן</h3><p>18-20 באפריל · 5 משתתפים</p><div class="trip-tags"><span class="tag">הסתיים</span><span class="tag">52 תמונות</span></div></div></article>
+              <button class="add-card"><span data-icon="plus"></span>יצירת טיול חדש</button>
+            </section>
+
+            <section class="screen" id="screen-planner" data-title="תכנון יומי">
+              <header class="app-header"><button class="action-round" data-screen="home" data-icon="chevron-right"></button><div><div class="sub">14-18 באוגוסט</div><h2>הגליל שלנו</h2></div><div class="head-spacer"></div><button class="action-round" data-icon="more-horizontal"></button></header>
+              <div class="tabs" id="dayTabs"><button class="tab">ד׳ · הגעה</button><button class="tab active">ה׳ · עכו</button><button class="tab">ו׳ · ידפת</button><button class="tab">ש׳ · בריכה</button><button class="tab">א׳ · חזרה</button></div>
+              <div class="day-summary"><div><strong>יום חמישי, עכו העתיקה</strong><span>4 תחנות · 27 ק״מ · יום רגוע</span></div><div class="weather"><span data-icon="sun"></span>29°</div></div>
+              <div class="timeline">
+                <div class="timeline-item"><div class="timeline-dot" data-icon="coffee"></div><div class="timeline-card"><div><h4>ארוחת בוקר במלון</h4><p>08:00 · כ-45 דקות</p></div><span class="drag">⠿</span></div></div>
+                <div class="timeline-item" data-screen="activity"><div class="timeline-dot" data-icon="landmark"></div><div class="timeline-card"><div><h4>עכו העתיקה והנמל</h4><p>09:30 · כרטיסים נשמרו</p></div><span class="drag">⠿</span></div></div>
+                <div class="timeline-item"><div class="timeline-dot" data-icon="utensils"></div><div class="timeline-card"><div><h4>ארוחת צהריים</h4><p>13:15 · הוזמן שולחן ל-4</p></div><span class="drag">⠿</span></div></div>
+                <div class="timeline-item"><div class="timeline-dot" data-icon="car"></div><div class="timeline-card"><div><h4>חזרה ומנוחה במלון</h4><p>16:00 · 35 דקות נסיעה</p></div><span class="drag">⠿</span></div></div>
+              </div>
+              <button class="add-card" id="addActivity"><span data-icon="plus"></span>הוספת אטרקציה, אוכל או זמן חופשי</button>
+            </section>
+
+            <section class="screen" id="screen-activity" data-title="פרטי אטרקציה">
+              <div class="detail-hero photo p1"><div class="detail-top"><button class="action-round" data-screen="planner" data-icon="chevron-right"></button><button class="action-round" data-icon="heart"></button></div><div class="detail-title"><h2>עכו העתיקה והנמל</h2><p><span data-icon="map-pin"></span>עכו · יום חמישי, 09:30</p></div></div>
+              <div class="info-grid"><div class="info-box"><span data-icon="clock"></span><strong>3 שעות</strong><span>משך מומלץ</span></div><div class="info-box"><span data-icon="ticket"></span><strong>₪120</strong><span>למשפחה</span></div><div class="info-box"><span data-icon="navigation"></span><strong>28 דק׳</strong><span>מהמלון</span></div></div>
+              <div class="section-row"><h3>מה נעשה שם?</h3><button class="text-btn" data-icon="edit">עריכה</button></div>
+              <p class="copy">מתחילים באולמות האבירים, ממשיכים דרך השוק אל הנמל ועוצרים לגלידה. התכנון משאיר זמן לשיט קצר אם הילדים ירצו.</p>
+              <div class="section-row"><h3>מי מגיע ומה חשבו?</h3><button class="text-btn" data-screen="reactions">פירוט</button></div>
+              <div class="family-reactions"><div class="person-reaction"><span class="emoji">😍</span><span>גלי</span></div><div class="person-reaction"><span class="emoji">🤩</span><span>רוני</span></div><div class="person-reaction"><span class="emoji">👍</span><span>הדר</span></div><div class="person-reaction"><span class="emoji">📸</span><span>יובל</span></div></div>
+              <div class="section-row"><h3>תמונות מהחוויה</h3><button class="text-btn" data-screen="gallery">לאלבום</button></div>
+              <div class="gallery" style="grid-auto-rows:88px"><div class="tile photo p1"></div><div class="tile photo p4"></div><div class="tile wide photo p2"></div></div>
+            </section>
+
+            <section class="screen" id="screen-map" data-title="מפת המסלול">
+              <header class="app-header"><button class="action-round" data-screen="home" data-icon="chevron-right"></button><div><div class="sub">יום חמישי</div><h2>המסלול שלנו</h2></div><div class="head-spacer"></div><button class="action-round" data-icon="layers"></button></header>
+              <div class="map-canvas">
+                <svg viewBox="0 0 390 520" aria-hidden="true"><path d="M-30 84C80 45 98 139 178 105s94-79 244-30" fill="none" stroke="#b9deed" stroke-width="28"/><path d="M22 398c68-53 92-27 137-81s88-33 128-95 90-38 136-88" fill="none" stroke="#fff" stroke-width="11"/><path d="M22 398c68-53 92-27 137-81s88-33 128-95 90-38 136-88" fill="none" stroke="#f4b94b" stroke-width="3" stroke-dasharray="8 8"/><path d="M12 180c52-26 75 11 122-20s65-8 114-45" fill="none" stroke="#d3e6d8" stroke-width="20"/><g fill="#d3e6d8"><circle cx="40" cy="270" r="35"/><circle cx="342" cy="350" r="48"/><circle cx="245" cy="31" r="28"/></g></svg>
+                <div class="map-pin pin1"><span>🏛️</span></div><div class="map-pin pin2"><span>🍦</span></div><div class="map-pin pin3"><span>🍽️</span></div>
+                <div class="map-card"><div class="thumb photo p1"></div><div><h4>התחנה הבאה: עכו</h4><p>09:30 · חניה שמורה · 28 דקות</p></div><button class="action-round" data-icon="navigation"></button></div>
+              </div>
+            </section>
+
+            <section class="screen" id="screen-gallery" data-title="האלבום המשפחתי">
+              <div class="gallery-head"><div><p>הגליל המשפחתי שלנו</p><h2>האלבום שלנו</h2></div><button class="action-round" data-icon="filter"></button></div>
+              <div class="tabs"><button class="tab active">הכל · 48</button><button class="tab">עכו</button><button class="tab">ידפת</button><button class="tab">בריכה</button></div>
+              <div class="gallery"><div class="tile tall photo p1"><div class="tile-meta"><span>עכו העתיקה</span><span>❤️ 4</span></div></div><div class="tile photo p2"><div class="tile-meta"><span>הים</span><span>🤩</span></div></div><div class="tile photo p4"><div class="tile-meta"><span>טעים!</span><span>😋 3</span></div></div><div class="tile wide photo p3"><div class="tile-meta"><span>הפיקניק שלנו</span><span>😂 2</span></div></div><div class="tile photo p4"></div><div class="tile photo p1"></div></div>
+              <button class="upload-fab" data-screen="moment" data-icon="camera" aria-label="הוספת תמונה"></button>
+            </section>
+
+            <section class="screen" id="screen-moment" data-title="הוספת רגע משפחתי">
+              <header class="app-header"><button class="action-round" data-screen="gallery" data-icon="chevron-right"></button><div><div class="sub">האלבום המשפחתי</div><h2>רגע חדש</h2></div></header>
+              <div class="composer">
+                <button class="dropzone" id="mockUpload"><span class="bubble" data-icon="camera"></span><strong>הוסיפי תמונה או סרטון</strong><span>מהמצלמה או מגלריית הטלפון</span></button>
+                <div class="form-group"><label for="momentCaption">מה קרה ברגע הזה?</label><textarea class="input" id="momentCaption" rows="3" placeholder="כתבי משפט קטן שיזכיר לכם את הרגע..."></textarea></div>
+                <div class="form-group"><label>איך היה?</label><div class="emoji-picker"><button class="emoji-btn selected">🤩</button><button class="emoji-btn">😍</button><button class="emoji-btn">😂</button><button class="emoji-btn">😋</button><button class="emoji-btn">😴</button><button class="emoji-btn">😱</button></div></div>
+                <div class="form-group"><label>מי היה שם?</label><div class="person-select"><span class="avatar sm coral selected">ג</span><span class="avatar sm sea selected">ר</span><span class="avatar sm sun selected">ה</span><span class="avatar sm selected">י</span></div></div>
+                <div class="form-group"><label for="momentPlace">שיוך לאטרקציה</label><select class="input" id="momentPlace"><option>עכו העתיקה והנמל</option><option>ארוחת ערב</option><option>ללא שיוך</option></select></div>
+              </div>
+              <button class="primary-btn" id="saveMoment">שמירת הרגע באלבום</button>
+            </section>
+
+            <section class="screen" id="screen-reactions" data-title="תגובות משפחתיות">
+              <header class="app-header"><button class="action-round" data-screen="home" data-icon="chevron-right"></button><div><div class="sub">כולם משתתפים</div><h2>הדופק המשפחתי</h2></div></header>
+              <div class="reaction-overview"><div class="reaction-stat"><b>🤩</b><span>הכי אהוב</span></div><div class="reaction-stat"><b>18</b><span>תגובות</span></div><div class="reaction-stat"><b>4</b><span>משתתפים</span></div><div class="reaction-stat"><b>8.9</b><span>ציון טיול</span></div></div>
+              <div class="section-row"><h3>מה כל אחד הרגיש?</h3><button class="text-btn">סינון לפי יום</button></div>
+              <div class="member-card"><span class="avatar coral">ג</span><div><h4>גלי</h4><p>8 תגובות · אהבה במיוחד את האוכל</p></div><div class="member-emojis">😍 😋 ❤️</div></div>
+              <div class="member-card"><span class="avatar sea">ר</span><div><h4>רוני</h4><p>6 תגובות · בחרה בעכו כשיא הטיול</p></div><div class="member-emojis">🤩 😂 📸</div></div>
+              <div class="member-card"><span class="avatar sun">ה</span><div><h4>הדר</h4><p>5 תגובות · הכי נהנה מהבריכה</p></div><div class="member-emojis">🏊 👍 😋</div></div>
+              <div class="member-card"><span class="avatar">י</span><div><h4>יובל</h4><p>4 תגובות · צילם 18 תמונות</p></div><div class="member-emojis">📸 ❤️ 😎</div></div>
+              <div class="section-row"><h3>האטרקציות המובילות</h3><span></span></div>
+              <div class="bar-chart"><div class="bar-row"><span>עכו</span><div class="bar"><i style="width:94%"></i></div><b>9.4</b></div><div class="bar-row"><span>בריכה</span><div class="bar"><i style="width:88%"></i></div><b>8.8</b></div><div class="bar-row"><span>ידפת</span><div class="bar"><i style="width:81%"></i></div><b>8.1</b></div></div>
+            </section>
+
+            <section class="screen" id="screen-checklist" data-title="רשימת ציוד">
+              <header class="app-header"><button class="action-round" data-screen="home" data-icon="chevron-right"></button><div><div class="sub">הגליל שלנו</div><h2>מה אורזים?</h2></div><div class="head-spacer"></div><button class="action-round" data-icon="plus"></button></header>
+              <div class="check-head"><div><h3>כמעט מוכנים</h3><p>18 מתוך 25 פריטים נארזו</p></div><div class="ring"><strong>72%</strong></div></div>
+              <div class="check-group"><h4>👕 בגדים <span class="tag">6 מתוך 8</span></h4><div class="check-item done"><span class="checkbox" data-icon="check"></span><span class="label">בגדים ל-4 ימים</span><span class="owner">גלי</span></div><div class="check-item done"><span class="checkbox" data-icon="check"></span><span class="label">בגדי ים</span><span class="owner">רוני</span></div><div class="check-item"><span class="checkbox"></span><span class="label">סווטשרט לערב</span><span class="owner">כולם</span></div></div>
+              <div class="check-group"><h4>🧴 רחצה ושמש <span class="tag">4 מתוך 5</span></h4><div class="check-item done"><span class="checkbox" data-icon="check"></span><span class="label">קרם הגנה</span><span class="owner">גלי</span></div><div class="check-item"><span class="checkbox"></span><span class="label">מגבות לבריכה</span><span class="owner">הדר</span></div></div>
+              <div class="check-group"><h4>🎫 מסמכים והזמנות</h4><div class="check-item done"><span class="checkbox" data-icon="check"></span><span class="label">אישור הזמנת מלון</span></div><div class="check-item done"><span class="checkbox" data-icon="check"></span><span class="label">כרטיסים לעכו</span></div></div>
+            </section>
+
+            <section class="screen" id="screen-family" data-title="המשפחה שלנו">
+              <div class="family-cover"></div><div class="family-main"><div class="avatar">GL</div><h2>המשפחה של גלי</h2><p>4 מטיילים · מטיילים יחד מאז 2018</p></div>
+              <div class="family-stats"><div class="family-stat"><strong>12</strong><span>טיולים</span></div><div class="family-stat"><strong>486</strong><span>תמונות</span></div><div class="family-stat"><strong>96</strong><span>רגעים</span></div></div>
+              <div class="section-row"><h3>בני המשפחה</h3><button class="text-btn"><span data-icon="plus"></span>הוספה</button></div>
+              <div class="member-card"><span class="avatar coral">ג</span><div><h4>גלי</h4><p>מנהלת טיולים · יכולה לערוך</p></div><span data-icon="edit"></span></div>
+              <div class="member-card"><span class="avatar sea">ר</span><div><h4>רוני</h4><p>מגיבה ומעלה תמונות</p></div><span data-icon="edit"></span></div>
+              <div class="member-card"><span class="avatar sun">ה</span><div><h4>הדר</h4><p>מגיב לחוויות</p></div><span data-icon="edit"></span></div>
+              <div class="section-row"><h3>הגדרות</h3><span></span></div>
+              <div class="settings-list"><button class="settings-row"><span data-icon="bell"></span><span>התראות משפחתיות</span><span class="chev" data-icon="chevron-left"></span></button><button class="settings-row"><span data-icon="shield"></span><span>פרטיות והרשאות</span><span class="chev" data-icon="chevron-left"></span></button><button class="settings-row" data-screen="icons"><span data-icon="grid"></span><span>ספריית האייקונים</span><span class="chev" data-icon="chevron-left"></span></button></div>
+            </section>
+
+            <section class="screen" id="screen-icons" data-title="ספריית אייקונים">
+              <header class="app-header"><button class="action-round" data-screen="family" data-icon="chevron-right"></button><div><div class="sub">70+ סימנים שימושיים</div><h2>ספריית אייקונים</h2></div></header>
+              <div class="icon-search"><span data-icon="search"></span><input id="iconSearch" placeholder="חיפוש אייקון, למשל בריכה"></div>
+              <div id="iconLibrary"></div>
+            </section>
+
+            <section class="screen" id="screen-states" data-title="מצבי מערכת">
+              <header class="app-header"><button class="action-round" data-screen="home" data-icon="chevron-right"></button><div><div class="sub">חוויית מוצר מלאה</div><h2>מצבי מערכת</h2></div></header>
+              <div class="state-card"><div class="state-visual"><span data-icon="images"></span></div><div><h4>אלבום ריק</h4><p>עדיין אין תמונות ביום הזה. העלו את הרגע הראשון שלכם.</p></div></div>
+              <div class="state-card"><div class="state-visual"><span class="loader"></span></div><div><h4>טעינה</h4><p>מסנכרנים תמונות ותגובות של בני המשפחה.</p></div></div>
+              <div class="state-card"><div class="state-visual" style="color:var(--danger)"><span data-icon="wifi-off"></span></div><div><h4>אין חיבור</h4><p>המידע נשמר בטלפון ויסתנכרן כשיהיה חיבור.</p></div></div>
+              <div class="state-card"><div class="state-visual" style="color:var(--success)"><span data-icon="check-circle"></span></div><div><h4>הרגע נשמר</h4><p>התמונה והתגובה נוספו לאלבום המשפחתי.</p></div></div>
+              <div class="state-card"><div class="state-visual" style="color:#b9801e"><span data-icon="alert-triangle"></span></div><div><h4>שינוי בתכנית</h4><p>האטרקציה סגורה. אפשר לבחור אחת משתי חלופות קרובות.</p></div></div>
+            </section>
+
+            <nav class="bottom-nav" aria-label="ניווט ראשי">
+              <button class="nav-btn active" data-screen="home"><span data-icon="home"></span><span>בית</span></button>
+              <button class="nav-btn" data-screen="planner"><span data-icon="calendar"></span><span>תכנון</span></button>
+              <button class="nav-btn add" data-screen="moment" aria-label="רגע חדש"><span data-icon="plus"></span></button>
+              <button class="nav-btn" data-screen="gallery"><span data-icon="images"></span><span>אלבום</span></button>
+              <button class="nav-btn" data-screen="family"><span data-icon="users"></span><span>משפחה</span></button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="panel controls-panel" id="controlsPanel" aria-label="בקרות עיצוב">
+      <div class="panel-scroll">
+        <div class="side-head"><div class="eyebrow">Design controls</div><h2 style="margin:5px 0 0">שליטה בעיצוב</h2></div>
+        <section class="panel-section">
+          <h2>סגנון גלובלי</h2>
+          <div class="color-row"><div class="color-control"><label for="coralColor">צבע מוביל</label><input type="color" id="coralColor" value="#ff6b66"></div><div class="color-control"><label for="seaColor">צבע משני</label><input type="color" id="seaColor" value="#42b8d4"></div></div>
+          <div class="control-row" style="margin-top:14px"><label for="radiusRange">עיגול פינות <output id="radiusOut">22px</output></label><input type="range" id="radiusRange" min="6" max="34" value="22"></div>
+          <div class="control-row"><label for="fontRange">גודל טקסט <output id="fontOut">100%</output></label><input type="range" id="fontRange" min="90" max="112" value="100"></div>
+          <div class="control-row"><label for="shadowRange">עוצמת צל <output id="shadowOut">100%</output></label><input type="range" id="shadowRange" min="0" max="150" value="100"></div>
+        </section>
+        <section class="panel-section">
+          <h2>קנבס ותצוגה</h2>
+          <div class="control-row"><label for="widthSelect">רוחב אבטיפוס</label><select class="select" id="widthSelect"><option value="375">375px · טלפון קטן</option><option value="390" selected>390px · טלפון</option><option value="430">430px · טלפון רחב</option><option value="720">720px · טאבלט</option></select></div>
+          <div class="version-badge"><span>גרסה נוכחית</span><b>v1.0</b></div>
+        </section>
+        <section class="panel-section">
+          <h2>שכבות במסך הנוכחי</h2>
+          <div class="layer-tree"><div class="layer"><span data-icon="layout"></span>screen-home <span class="eye" data-icon="eye"></span></div><div class="layer child"><span data-icon="image"></span>home-trip-card <span class="eye" data-icon="eye"></span></div><div class="layer child"><span data-icon="grid"></span>quick-actions <span class="eye" data-icon="eye"></span></div><div class="layer child"><span data-icon="list"></span>next-activities <span class="eye" data-icon="eye"></span></div><div class="layer child"><span data-icon="smile"></span>family-pulse <span class="eye" data-icon="eye"></span></div></div>
+        </section>
+        <section class="panel-section">
+          <h2>היסטוריה וייצוא</h2>
+          <div class="control-actions"><button class="control-btn" id="undoBtn"><span data-icon="undo"></span>ביטול</button><button class="control-btn" id="redoBtn"><span data-icon="redo"></span>ביצוע חוזר</button><button class="control-btn" id="resetBtn"><span data-icon="rotate-ccw"></span>איפוס</button><button class="control-btn primary" id="exportBtn"><span data-icon="download"></span>Manifest</button></div>
+          <p class="panel-note">השינויים נשמרים מקומית בדפדפן. ניתן לייצא קובץ JSON ולשחזר את אותם ערכים בהמשך.</p>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const iconPaths = {
+      home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.8V21h14V9.8"/><path d="M9 21v-6h6v6"/>',
+      calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+      images:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+      users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+      plus:'<path d="M12 5v14M5 12h14"/>', bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>',
+      map:'<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>',
+      'map-pin':'<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+      camera:'<path d="M14.5 4 16 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3l1.5-3z"/><circle cx="12" cy="13" r="4"/>',
+      'check-square':'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8 12 2.5 2.5L16.5 8"/>',
+      heart:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/>',
+      clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', ticket:'<path d="M2 9a3 3 0 0 0 0 6v3h20v-3a3 3 0 0 0 0-6V6H2z"/><path d="M13 6v12"/>',
+      navigation:'<path d="m3 11 18-8-8 18-2-8z"/>', utensils:'<path d="M3 3v7c0 2 2 3 4 3s4-1 4-3V3M7 3v18M17 3v18M17 3c3 2 4 5 4 8h-4"/>',
+      'chevron-right':'<path d="m9 18 6-6-6-6"/>', 'chevron-left':'<path d="m15 18-6-6 6-6"/>',
+      edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/>',
+      sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+      coffee:'<path d="M4 8h12v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM16 10h2a3 3 0 0 1 0 6h-2M6 3v2M10 3v2M14 3v2"/>',
+      landmark:'<path d="m3 10 9-6 9 6zM5 10v8M9 10v8M15 10v8M19 10v8M3 18h18M2 21h20"/>',
+      car:'<path d="m5 17-2-1V9l2-1 2-4h10l2 4 2 1v7l-2 1"/><path d="M5 17v2M19 17v2M7 13h10M6 9h12"/>',
+      'more-horizontal':'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+      layers:'<path d="m12 2 9 5-9 5-9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/>', filter:'<path d="M4 4h16l-6 7v6l-4 2v-8z"/>',
+      search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>', check:'<path d="m5 12 4 4L19 6"/>', 'check-circle':'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+      'wifi-off':'<path d="m2 2 20 20M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 3-2M14 10a10 10 0 0 1 5 3M2 9a15 15 0 0 1 2.5-2M9 4.5A15 15 0 0 1 22 9M12 20h.01"/>',
+      'alert-triangle':'<path d="M10.3 3.7 2.4 17.3A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.7L13.7 3.7a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>',
+      shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>', grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+      phone:'<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>', smartphone:'<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/>', tablet:'<rect x="3" y="2" width="18" height="20" rx="2"/><path d="M11 18h2"/>',
+      download:'<path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>', sliders:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+      route:'<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19c8 0 2-14 8-14"/>', layout:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>',
+      image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1"/><path d="m21 15-5-5L5 21"/>', list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>', smile:'<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>',
+      eye:'<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>', undo:'<path d="m9 14-5-5 5-5"/><path d="M4 9h9a7 7 0 0 1 7 7v1"/>', redo:'<path d="m15 14 5-5-5-5"/><path d="M20 9h-9a7 7 0 0 0-7 7v1"/>', 'rotate-ccw':'<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/>'
+    };
+    function iconSvg(name, cls='') { return `<svg class="icon ${cls}" viewBox="0 0 24 24" aria-hidden="true">${iconPaths[name] || iconPaths.grid}</svg>`; }
+    function renderIcons(root=document) {
+      root.querySelectorAll('[data-icon]').forEach(el => {
+        if (el.dataset.rendered) return;
+        const name = el.dataset.icon;
+        if (el.classList.contains('i-slot')) { el.outerHTML = iconSvg(name,'sm'); return; }
+        el.insertAdjacentHTML('afterbegin', iconSvg(name)); el.dataset.rendered='1';
+      });
+    }
+
+    const screens = [
+      ['home','בית','home'],['trips','כל הטיולים','route'],['planner','תכנון יומי','calendar'],['activity','פרטי אטרקציה','landmark'],['map','מפת מסלול','map'],['gallery','אלבום תמונות','images'],['moment','רגע משפחתי חדש','camera'],['reactions','תגובות משפחתיות','smile'],['checklist','רשימת ציוד','check-square'],['family','המשפחה שלנו','users'],['icons','ספריית אייקונים','grid'],['states','מצבי מערכת','layers']
+    ];
+    const screenList = document.getElementById('screenList');
+    screenList.innerHTML = screens.map((s,i)=>`<button class="screen-link ${i===0?'active':''}" data-screen="${s[0]}">${iconSvg(s[2],'sm')}<span>${s[1]}</span><span class="num">${String(i+1).padStart(2,'0')}</span></button>`).join('');
+
+    const iconGroups = [
+      ['תחבורה והתניידות',[['🚗','רכב'],['🚆','רכבת'],['✈️','טיסה'],['🚌','אוטובוס'],['🚲','אופניים'],['🚶','הליכה'],['⛴️','מעבורת'],['🚕','מונית'],['🚡','רכבל'],['🛴','קורקינט']]],
+      ['מקומות ולינה',[['🏖️','חוף'],['🏞️','טבע'],['🏛️','מוזיאון'],['🏰','אתר עתיק'],['🏕️','קמפינג'],['🏨','מלון'],['🏡','צימר'],['🍽️','מסעדה'],['🛝','גן משחקים'],['🛍️','קניות']]],
+      ['אטרקציות ופעילויות',[['🥾','מסלול'],['🏊','בריכה'],['🤿','צלילה'],['🚣','שיט'],['🎨','יצירה'],['🎭','מופע'],['🎢','פארק'],['🐒','בעלי חיים'],['📸','צילום'],['🧺','פיקניק']]],
+      ['תכנון ומידע',[['🗓️','תאריך'],['⏰','שעה'],['📍','מיקום'],['🎟️','כרטיס'],['💳','תשלום'],['🧾','קבלה'],['🌦️','מזג אוויר'],['🅿️','חניה'],['📞','טלפון'],['🔗','קישור']]],
+      ['משפחה ומשתתפים',[['👨‍👩‍👧‍👦','משפחה'],['👶','תינוק'],['🧒','ילד'],['👧','ילדה'],['👦','ילד'],['🧑','מבוגר'],['👵','סבתא'],['👴','סבא'],['🐶','כלב'],['➕','הזמנה']]],
+      ['תגובות וחוויות',[['🤩','מדהים'],['😍','אהבתי'],['😂','מצחיק'],['😋','טעים'],['😴','מעייף'],['😱','מפחיד'],['😕','לא בטוח'],['❤️','לב'],['👍','מומלץ'],['⭐','דירוג']]],
+      ['מדיה וזיכרונות',[['📷','תמונה'],['🎥','וידאו'],['🎙️','הקלטה'],['🖼️','אלבום'],['📝','סיפור'],['💬','תגובה'],['🏷️','תגית'],['⬆️','העלאה'],['↗️','שיתוף'],['🗑️','מחיקה']]],
+      ['סטטוס ובטיחות',[['✅','הושלם'],['⚠️','אזהרה'],['❌','בוטל'],['⏳','בהמתנה'],['🔒','פרטי'],['🌐','ציבורי'],['🛟','בטיחות'],['🏥','רפואה'],['☀️','שמש'],['📶','קליטה']]]
+    ];
+    const iconLibrary = document.getElementById('iconLibrary');
+    function renderIconLibrary(query='') {
+      const q=query.trim().toLowerCase();
+      iconLibrary.innerHTML = iconGroups.map(group=>{
+        const items=group[1].filter(x=>!q || x[1].includes(q) || x[0].includes(q));
+        if(!items.length) return '';
+        return `<section class="icon-category"><h3>${group[0]}<span>${items.length} אייקונים</span></h3><div class="icon-grid">${items.map(x=>`<button class="icon-token" title="העתקת ${x[1]}"><b>${x[0]}</b><span>${x[1]}</span></button>`).join('')}</div></section>`;
+      }).join('') || '<div class="state-card"><div class="state-visual">🔎</div><div><h4>לא מצאנו אייקון</h4><p>נסי מילה אחרת או קטגוריה רחבה יותר.</p></div></div>';
+    }
+    renderIconLibrary();
+    document.getElementById('iconSearch').addEventListener('input',e=>renderIconLibrary(e.target.value));
+
+    const screenEls=[...document.querySelectorAll('.screen')];
+    function showScreen(id) {
+      screenEls.forEach(el=>el.classList.toggle('active',el.id===`screen-${id}`));
+      document.querySelectorAll('[data-screen].screen-link').forEach(el=>el.classList.toggle('active',el.dataset.screen===id));
+      document.querySelectorAll('.bottom-nav .nav-btn').forEach(el=>el.classList.toggle('active',el.dataset.screen===id));
+      const active=document.getElementById(`screen-${id}`); if(active) active.scrollTop=0;
+      document.getElementById('stageTitle').textContent=active?.dataset.title || 'TripTales';
+    }
+    document.addEventListener('click',e=>{
+      const target=e.target.closest('[data-screen]'); if(target){ showScreen(target.dataset.screen); }
+      const emoji=e.target.closest('.emoji-btn'); if(emoji){ emoji.parentElement.querySelectorAll('.emoji-btn').forEach(b=>b.classList.remove('selected')); emoji.classList.add('selected'); }
+      const person=e.target.closest('.person-select .avatar'); if(person) person.classList.toggle('selected');
+      const check=e.target.closest('.check-item'); if(check) { check.classList.toggle('done'); const box=check.querySelector('.checkbox'); box.innerHTML=check.classList.contains('done')?iconSvg('check','sm'):''; }
+      const token=e.target.closest('.icon-token'); if(token){ navigator.clipboard?.writeText(token.querySelector('b').textContent); toast('האייקון הועתק'); }
+    });
+
+    document.querySelectorAll('#dayTabs .tab').forEach(tab=>tab.addEventListener('click',()=>{ tab.parentElement.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); tab.classList.add('active'); toast('היום הוחלף'); }));
+    document.getElementById('addActivity').addEventListener('click',()=>toast('כאן ייפתח טופס הוספת פעילות'));
+    document.getElementById('mockUpload').addEventListener('click',()=>toast('המצלמה והגלריה ייפתחו במוצר המלא'));
+    document.getElementById('saveMoment').addEventListener('click',()=>{ toast('הרגע נשמר באלבום'); setTimeout(()=>showScreen('gallery'),700); });
+    function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(window.toastTimer); window.toastTimer=setTimeout(()=>el.classList.remove('show'),1700); }
+
+    const defaults={coral:'#ff6b66',sea:'#42b8d4',radius:22,font:100,shadow:100,width:390,direction:'a'};
+    let state={...defaults}, history=[], future=[];
+    function hexToSoft(hex){ const n=parseInt(hex.slice(1),16),r=(n>>16)&255,g=(n>>8)&255,b=n&255; return `rgba(${r},${g},${b},.12)`; }
+    function applyState(push=false){
+      if(push){ history.push({...state}); if(history.length>30)history.shift(); future=[]; }
+      const root=document.documentElement;
+      root.style.setProperty('--coral',state.coral); root.style.setProperty('--coral-soft',hexToSoft(state.coral)); root.style.setProperty('--sea',state.sea); root.style.setProperty('--sea-soft',hexToSoft(state.sea)); root.style.setProperty('--radius',state.radius+'px'); root.style.setProperty('--font-scale',state.font/100); root.style.setProperty('--shadow-strength',state.shadow/100); root.style.setProperty('--phone-width',state.width+'px');
+      document.body.classList.remove('direction-a','direction-b','direction-c'); document.body.classList.add('direction-'+state.direction);
+      document.querySelectorAll('.direction-card').forEach(x=>x.classList.toggle('active',x.dataset.direction===state.direction));
+      document.getElementById('directionLabel').textContent={a:'כיוון A, יומן משפחתי',b:'כיוון B, מסלול והרפתקה',c:'כיוון C, אלבום סקראפבוק'}[state.direction];
+      document.getElementById('coralColor').value=state.coral; document.getElementById('seaColor').value=state.sea; document.getElementById('radiusRange').value=state.radius; document.getElementById('fontRange').value=state.font; document.getElementById('shadowRange').value=state.shadow; document.getElementById('widthSelect').value=String(state.width);
+      document.getElementById('radiusOut').textContent=state.radius+'px'; document.getElementById('fontOut').textContent=state.font+'%'; document.getElementById('shadowOut').textContent=state.shadow+'%';
+      document.querySelectorAll('.view-btn').forEach(x=>x.classList.toggle('active',Number(x.dataset.width)===state.width));
+      localStorage.setItem('triptales-design-state',JSON.stringify(state));
+    }
+    function update(key,value){ history.push({...state}); future=[]; state[key]=value; applyState(); }
+    document.getElementById('coralColor').addEventListener('input',e=>update('coral',e.target.value));
+    document.getElementById('seaColor').addEventListener('input',e=>update('sea',e.target.value));
+    document.getElementById('radiusRange').addEventListener('input',e=>update('radius',Number(e.target.value)));
+    document.getElementById('fontRange').addEventListener('input',e=>update('font',Number(e.target.value)));
+    document.getElementById('shadowRange').addEventListener('input',e=>update('shadow',Number(e.target.value)));
+    document.getElementById('widthSelect').addEventListener('change',e=>update('width',Number(e.target.value)));
+    document.querySelectorAll('.view-btn').forEach(b=>b.addEventListener('click',()=>update('width',Number(b.dataset.width))));
+    document.querySelectorAll('.direction-card').forEach(card=>card.addEventListener('click',()=>{
+      const presets={a:{coral:'#ff6b66',sea:'#42b8d4',radius:22},b:{coral:'#1ca69d',sea:'#2a7fb8',radius:17},c:{coral:'#f06b88',sea:'#54b8ca',radius:13}}[card.dataset.direction];
+      history.push({...state}); state={...state,...presets,direction:card.dataset.direction}; future=[]; applyState();
+    }));
+    document.getElementById('undoBtn').addEventListener('click',()=>{ if(!history.length)return toast('אין שינוי קודם'); future.push({...state}); state=history.pop(); applyState(); });
+    document.getElementById('redoBtn').addEventListener('click',()=>{ if(!future.length)return toast('אין שינוי לביצוע חוזר'); history.push({...state}); state=future.pop(); applyState(); });
+    document.getElementById('resetBtn').addEventListener('click',()=>{ history.push({...state}); state={...defaults}; future=[]; applyState(); toast('העיצוב אופס'); });
+    function exportManifest(){
+      const manifest={schemaVersion:'1.0',project:{name:'TripTales Family Travel',type:'application-interface',direction:state.direction.toUpperCase(),currentVersion:'v1.0'},breakpoints:{mobile:0,tablet:768,desktop:1200},tokens:{colors:{background:'#ffffff',text:'#20243a',primary:state.coral,secondary:state.sea,accent:'#f5bd4d'},typography:{headingFamily:'Assistant, Segoe UI, Arial, sans-serif',bodyFamily:'Assistant, Segoe UI, Arial, sans-serif',baseSize:(16*state.font/100).toFixed(1)+'px'},spacing:{xs:'4px',sm:'8px',md:'16px',lg:'24px',xl:'40px'},radii:{sm:'12px',md:state.radius+'px',pill:'999px'}},components:{mobileCard:{shadowStrength:state.shadow/100},phonePreview:{width:state.width+'px'}},elements:screens.map(s=>({id:'screen-'+s[0],type:'screen',content:s[1],locked:false,visible:true,style:{},responsive:{mobile:{},tablet:{},desktop:{}}})),assets:[{id:'trip-photos',path:'assets/trip-photos.png',type:'image',note:'AI-generated demonstration contact sheet'}],history:[{version:'v1.0',note:'Initial recommended family journal direction with 12 screens and icon library'}]};
+      const blob=new Blob([JSON.stringify(manifest,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a'); a.href=url;a.download='triptales-design-manifest.json';a.click();URL.revokeObjectURL(url);toast('קובץ ההגדרות יוצא');
+    }
+    document.getElementById('exportBtn').addEventListener('click',exportManifest); document.getElementById('exportTop').addEventListener('click',exportManifest);
+    document.getElementById('openControls').addEventListener('click',()=>document.getElementById('controlsPanel').classList.toggle('open'));
+    const saved=localStorage.getItem('triptales-design-state'); if(saved){ try{ state={...defaults,...JSON.parse(saved)}; }catch(e){} }
+    applyState(); renderIcons();
+  </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html dir="rtl" lang="he">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>TripTales — יומן המסע המשפחתי</title>
+    <meta name="description" content="TripTales — יומן המסע המשפחתי של המשפחה" />
+    <!-- PWA / standalone metas -->
+    <meta name="theme-color" content="#ff6b66" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="TripTales" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <script type="text/javascript">
+      // מפענח את הנתיב ש-404.html קידד (ראה public/404.html) ומחזיר את ה-URL
+      // המקורי דרך history.replaceState, לפני ש-react-router עולה.
+      (function (l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search
+            .slice(1)
+            .split('&')
+            .map(function (s) {
+              return s.replace(/~and~/g, '&');
+            })
+            .join('?');
+          window.history.replaceState(null, '', l.pathname.slice(0, -1) + decoded + l.hash);
+        }
+      })(window.location);
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
