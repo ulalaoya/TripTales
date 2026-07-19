@@ -3,9 +3,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // בפריסה ל-GitHub Pages (project page) האפליקציה יושבת תחת נתיב-משנה
-// כמו /triptales/ במקום השורש. ה-workflow מגדיר GH_PAGES=true בזמן build
-// כדי ש-base יתאים לנתיב הזה; בפיתוח ובבנייה מקומית base='/'.
-const repoBase = process.env.GH_PAGES ? '/triptales/' : '/'
+// שהוא שם המאגר — /TripTale/ — במקום השורש. ה-workflow מגדיר GH_PAGES=true
+// בזמן build כדי ש-base יתאים לנתיב הזה; בפיתוח ובבנייה מקומית base='/'.
+// שים לב: הנתיב תלוי-רישיות וחייב להתאים בדיוק לשם המאגר בגיטהב.
+const repoBase = process.env.GH_PAGES ? '/TripTale/' : '/'
 
 // https://vitejs.dev/config/
 export default defineConfig({
