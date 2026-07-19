@@ -47,7 +47,7 @@ React 18 · Vite · TypeScript · Tailwind · Zustand (persist → localStorage)
 ## פריסה
 
 נפרס אוטומטית ל-GitHub Pages בכל דחיפה ל-`main` (ראה `.github/workflows/deploy.yml`).
-הבנייה לפרודקשן רצה עם `GH_PAGES=true` כדי להגדיר `base: '/TripTale/'`; קובץ `public/404.html`
+הבנייה לפרודקשן רצה עם `GH_PAGES=true` כדי להגדיר `base: '/TripTales/'`; קובץ `public/404.html`
 מטפל ב-deep links כך שרענון בתוך נתיב פנימי עובד.
 
 ## סטטוס
