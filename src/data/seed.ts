@@ -96,12 +96,19 @@ export const SEED_TRIPS: Trip[] = [
     endDate: '2025-07-15',
     transport: 'flight',
     order: 0,
+    members: ['m-parent', 'm-child'],
+    joinCode: 'GREEK7',
     checklist: makeDefaultChecklist('t-flight'),
     days: [
       {
         id: 't-flight-d1',
         date: '2025-07-10',
         title: 'יום ההגעה',
+        activities: [
+          { id: 't-flight-d1-a1', title: 'איסוף רכב שכור', time: '15:00', icon: '🚗', loc: 'שדה התעופה סנטוריני' },
+          { id: 't-flight-d1-a2', title: 'צ׳ק-אין במלון', time: '16:30', icon: '🏨', loc: 'Oia, Santorini' },
+          { id: 't-flight-d1-a3', title: 'ארוחת ערב מול השקיעה', time: '19:30', icon: '🍽️', loc: 'Ambrosia Restaurant, Oia', notes: 'להזמין מקום ליד המעקה' },
+        ],
         entries: [
           {
             id: 'e1',
@@ -138,6 +145,11 @@ export const SEED_TRIPS: Trip[] = [
         id: 't-flight-d2',
         date: '2025-07-11',
         title: 'שיט בקלדרה',
+        activities: [
+          { id: 't-flight-d2-a1', title: 'שיט אל ההר הגעשי', time: '10:00', icon: '⛵', loc: 'Old Port, Fira' },
+          { id: 't-flight-d2-a2', title: 'רחצה במעיינות החמים', time: '12:00', icon: '🌊' },
+          { id: 't-flight-d2-a3', title: 'צהריים בטברנה', time: '14:00', icon: '🍽️', loc: 'To Psaraki, Vlychada' },
+        ],
         entries: [
           {
             id: 'e2',
@@ -164,6 +176,10 @@ export const SEED_TRIPS: Trip[] = [
         id: 't-flight-d3',
         date: '2025-07-15',
         title: 'יום החזרה',
+        activities: [
+          { id: 't-flight-d3-a1', title: 'קניות מזכרות בפירה', time: '09:00', icon: '🛍️', loc: 'Fira, Santorini' },
+          { id: 't-flight-d3-a2', title: 'החזרת רכב', time: '12:00', icon: '🚗', loc: 'שדה התעופה סנטוריני' },
+        ],
         entries: [],
         photos: [],
       },
@@ -177,12 +193,19 @@ export const SEED_TRIPS: Trip[] = [
     endDate: DRIVE_END,
     transport: 'drive',
     order: 1,
+    members: ['m-parent', 'm-child'],
+    joinCode: 'SUNSET',
     checklist: makeDefaultChecklist('t-drive'),
     days: [
       {
         id: 't-drive-d1',
         date: DRIVE_START,
         title: 'יוצאים צפונה',
+        activities: [
+          { id: 't-drive-d1-a1', title: 'טיול בשמורת החולה', time: '11:00', icon: '🦩', loc: 'שמורת החולה' },
+          { id: 't-drive-d1-a2', title: 'צהריים בחאן', time: '13:30', icon: '🍽️', loc: 'דובזה, ראש פינה', notes: 'חומוס מעולה' },
+          { id: 't-drive-d1-a3', title: 'סיור ברחוב העתיק', time: '17:00', icon: '🏘️', loc: 'הרחוב העתיק, ראש פינה' },
+        ],
         entries: [
           {
             id: 'e3',
@@ -210,6 +233,10 @@ export const SEED_TRIPS: Trip[] = [
         id: 't-drive-d2',
         date: DRIVE_END,
         title: 'חוזרים הביתה',
+        activities: [
+          { id: 't-drive-d2-a1', title: 'ארוחת בוקר במאפייה', time: '09:00', icon: '🥐', loc: 'מאפיית ראש פינה' },
+          { id: 't-drive-d2-a2', title: 'עצירה בכנרת', time: '11:30', icon: '🏖️', loc: 'חוף הכנרת' },
+        ],
         entries: [],
         photos: [
           {

@@ -6,7 +6,7 @@ import { useT } from '../i18n/useT'
 import { can } from '../lib/permissions'
 import { AvatarPicker } from '../components/AvatarPicker'
 import { Avatar } from '../components/Avatar'
-import { Logo } from '../components/Logo'
+import { Icon } from '../components/Icon'
 import { LangToggle } from '../components/LangToggle'
 
 export function Profile() {
@@ -25,14 +25,21 @@ export function Profile() {
   function save(e: React.FormEvent) {
     e.preventDefault()
     updateProfile({ name: name.trim() || member.name, figure, color, role: canEditRole ? role : member.role })
-    navigate('/family')
+    navigate('/trips')
   }
 
   return (
     <div className="paper min-h-full">
       <div className="max-w-column mx-auto px-5 py-5">
         <header className="flex justify-between items-center mb-5">
-          <Logo variant="emboss" size="sm" />
+          <button
+            type="button"
+            onClick={() => navigate('/trips')}
+            className="tap inline-flex items-center gap-1 text-[var(--ink)]"
+          >
+            <Icon name="chevron" size={18} className="dir-back" />
+            {t('back')}
+          </button>
           <LangToggle />
         </header>
 

@@ -71,10 +71,29 @@ export interface ChecklistGroup {
   items: ChecklistItem[]
 }
 
+/**
+ * A single planned activity slot on a day (attraction, restaurant, travel leg).
+ * Order is the array order within `Day.activities`.
+ */
+export interface Activity {
+  id: string
+  title: string
+  /** Optional 'HH:MM' time. */
+  time?: string
+  /** Optional emoji picked from the preset row. */
+  icon?: string
+  /** Optional location text → Google Maps chip. */
+  loc?: string
+  /** Optional free-text notes. */
+  notes?: string
+}
+
 export interface Day {
   id: string
   date: string
   title: string
+  /** Ordered activity slots for the day. */
+  activities: Activity[]
   entries: Entry[]
   photos: Photo[]
 }
@@ -88,6 +107,10 @@ export interface Trip {
   transport: Transport
   order: number
   days: Day[]
+  /** Member ids who belong to (and can be shown for) this trip. */
+  members: string[]
+  /** Per-trip join code for effective sharing. */
+  joinCode: string
   /** When true the trip is a loose idea (status derived as 'idea'). */
   idea?: boolean
   /** Equipment / packing checklist groups. */

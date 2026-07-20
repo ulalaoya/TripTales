@@ -7,10 +7,12 @@ import { buildInviteText } from '../lib/invite'
 import { checklistProgress } from '../lib/checklist'
 import { tripStatus, statusLabel, statusTag, type TripStatus } from '../lib/tripStatus'
 import { todayISO } from '../lib/tripSelect'
-import type { Trip, Photo } from '../types'
+import { isValidJoinCodeFormat } from '../lib/joinCode'
+import type { Trip, Photo, Member } from '../types'
 import { Icon } from '../components/Icon'
 import { Logo } from '../components/Logo'
 import { LangToggle } from '../components/LangToggle'
+import { Avatar } from '../components/Avatar'
 
 type Tab = 'all' | 'planned' | 'ended' | 'idea'
 
@@ -37,12 +39,17 @@ export function Dashboard() {
   const members = useStore((s) => s.members)
   const deleteTrip = useStore((s) => s.deleteTrip)
   const reorderTrip = useStore((s) => s.reorderTrip)
+  const joinTripByCode = useStore((s) => s.joinTripByCode)
   const showToast = useStore((s) => s.showToast)
   const [editMode, setEditMode] = useState(false)
   const [tab, setTab] = useState<Tab>('all')
+  const [joinOpen, setJoinOpen] = useState(false)
+  const [code, setCode] = useState('')
+  const [joinErr, setJoinErr] = useState('')
 
   const today = todayISO()
   const isParent = member.role === 'מבוגר'
+  const byId = (id: string): Member | undefined => members.find((m) => m.id === id)
   const sorted = [...trips].sort((a, b) => a.order - b.order)
   const visible = sorted.filter((tr) => matchesTab(tripStatus(tr, today), tab))
 
@@ -54,7 +61,7 @@ export function Dashboard() {
   ]
 
   async function share(trip: Trip) {
-    const text = buildInviteText(trip, t.lang)
+    const text = buildInviteText(trip, t.lang, trip.joinCode)
     try {
       if (navigator.share) {
         await navigator.share({ title: trip.name, text })
@@ -71,12 +78,40 @@ export function Dashboard() {
     showToast(t('copied'))
   }
 
+  function submitJoin(e: React.FormEvent) {
+    e.preventDefault()
+    setJoinErr('')
+    if (!isValidJoinCodeFormat(code)) {
+      setJoinErr(t('joinInvalidFormat'))
+      return
+    }
+    const res = joinTripByCode(code)
+    if (res.ok) {
+      showToast(t('joinedTrip'))
+      setJoinOpen(false)
+      setCode('')
+      navigate(`/trips/${res.tripId}`)
+    } else {
+      setJoinErr(res.reason === 'already' ? t('joinAlready') : t('joinNotFound'))
+    }
+  }
+
   return (
     <div className="paper min-h-full">
       <div className="max-w-column mx-auto px-5 py-5">
         <header className="flex justify-between items-center mb-5">
           <Logo variant="emboss" size="sm" />
-          <LangToggle />
+          <div className="flex items-center gap-2">
+            <LangToggle />
+            <button
+              type="button"
+              onClick={() => navigate('/profile/edit')}
+              aria-label={t('profile')}
+              className="tap"
+            >
+              <Avatar figure={member.figure} color={member.color} size={40} />
+            </button>
+          </div>
         </header>
 
         <div className="flex items-center justify-between mb-3">
@@ -115,6 +150,7 @@ export function Dashboard() {
             const status = tripStatus(trip, today)
             const pct = checklistProgress(trip.checklist).pct
             const cover = coverPhoto(trip)
+            const tripMembers = trip.members.map(byId).filter(Boolean) as Member[]
             return (
               <li key={trip.id} className="trip-card p-2.5">
                 <Link
@@ -139,17 +175,21 @@ export function Dashboard() {
                       />
                       <h3 className="font-hand text-lg truncate">{trip.name}</h3>
                     </div>
-                    <p className="text-xs text-[var(--muted)] mt-1">
+                    <p className="text-xs text-[var(--muted)] mt-1 truncate">
+                      <bdi>{trip.destination}</bdi>
+                    </p>
+                    <p className="text-xs text-[var(--muted)] mt-0.5">
                       <bdi>
                         {trip.startDate} – {trip.endDate}
-                      </bdi>{' '}
-                      · {t.fn('participantsCount')(members.length)}
+                      </bdi>
                     </p>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      <span className="tag text-[10px] px-2 py-1">{statusTag(status, t.lang)}</span>
-                      <span className="tag text-[10px] px-2 py-1">
-                        {t.fn('daysCount')(trip.days.length)}
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="avatar-stack">
+                        {tripMembers.slice(0, 4).map((m) => (
+                          <Avatar key={m.id} figure={m.figure} color={m.color} size={24} />
+                        ))}
                       </span>
+                      <span className="tag text-[10px] px-2 py-1">{statusTag(status, t.lang)}</span>
                       <span className="tag text-[10px] px-2 py-1">{pct}%</span>
                     </div>
                   </div>
@@ -187,14 +227,6 @@ export function Dashboard() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => navigate(`/trips/${trip.id}/edit`)}
-                        aria-label={t('edit')}
-                        className="tap p-2 text-[var(--ink)]"
-                      >
-                        <Icon name="edit" size={18} />
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => deleteTrip(trip.id)}
                         aria-label={t('delete')}
                         className="tap p-2 text-[var(--danger)] ms-auto"
@@ -209,17 +241,62 @@ export function Dashboard() {
           })}
         </ul>
 
-        {/* Parent-only create card */}
+        {/* Primary CTA — plan a new trip (adults only) */}
         {can(member.role, 'trip.create') && (
           <button
             type="button"
             onClick={() => navigate('/trips/new')}
-            className="add-card tap mt-3"
+            className="primary-btn tap w-full py-3 text-lg mt-4 inline-flex items-center justify-center gap-2"
           >
-            <Icon name="plus" size={18} />
-            {t('createTrip')}
+            <Icon name="plus" size={20} />
+            {t('planTrip')}
           </button>
         )}
+
+        {/* Secondary — join with a code */}
+        <div className="mt-3">
+          {joinOpen ? (
+            <form onSubmit={submitJoin} className="journal-lined p-4 space-y-3">
+              <label htmlFor="join-code" className="block text-sm font-medium">
+                {t('enterCode')}
+              </label>
+              <input
+                id="join-code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                dir="ltr"
+                autoFocus
+                maxLength={12}
+                className="tap w-full rounded-[14px] px-3 py-2.5 bg-white border border-[var(--line)] outline-none text-center tracking-[0.3em] uppercase font-mono"
+                aria-invalid={!!joinErr}
+                aria-describedby="join-err"
+              />
+              <div id="join-err" aria-live="assertive" className="min-h-[1.1rem] text-sm text-[var(--danger)]">
+                {joinErr}
+              </div>
+              <div className="flex gap-2">
+                <button type="submit" className="primary-btn tap px-4 text-sm">
+                  {t('join')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setJoinOpen(false)
+                    setJoinErr('')
+                  }}
+                  className="tap px-4 rounded-[14px] border border-[var(--line)] bg-white text-sm"
+                >
+                  {t('cancel')}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button type="button" onClick={() => setJoinOpen(true)} className="add-card tap">
+              <Icon name="users" size={18} />
+              {t('joinWithCode')}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
