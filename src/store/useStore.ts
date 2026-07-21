@@ -12,7 +12,7 @@ import type {
   ChecklistGroup,
   ChecklistItem,
 } from '../types'
-import { SEED_MEMBERS, SEED_TRIPS, makeDefaultChecklist } from '../data/seed'
+import { SEED_MEMBERS, SEED_TRIPS, makeDefaultChecklist, makeDriveTrip } from '../data/seed'
 import { normalizePhone } from '../lib/phone'
 import { toggleReact } from '../lib/reactions'
 import { uploadStatusFor } from '../lib/permissions'
@@ -421,7 +421,7 @@ export const useStore = create<State>()(
     }),
     {
       name: 'triptales-store',
-      version: 3,
+      version: 4,
       partialize: (s) => ({
         lang: s.lang,
         members: s.members,
@@ -432,6 +432,8 @@ export const useStore = create<State>()(
        * v1 -> v2: back-fill a default equipment checklist onto legacy trips.
        * v2 -> v3: back-fill per-trip `members` (all current members) + `joinCode`,
        *           and give every day an empty `activities` array.
+       * v3 -> v4: replace the old demo weekend trip with the real Galilee trip —
+       *           but ONLY if the user never renamed it, so real edits are never lost.
        */
       migrate: (persisted, version) => {
         const state = persisted as { trips?: Trip[]; members?: Member[] } | undefined
@@ -449,6 +451,13 @@ export const useStore = create<State>()(
             joinCode: t.joinCode ?? generateJoinCode(),
             days: (t.days ?? []).map((d) => ({ ...d, activities: d.activities ?? [] })),
           }))
+        }
+        if (version < 4 && Array.isArray(state.trips)) {
+          state.trips = state.trips.map((t) =>
+            t.id === 't-drive' && t.name === 'סופ"ש בגליל'
+              ? { ...makeDriveTrip(), order: t.order }
+              : t,
+          )
         }
         return state as never
       },
