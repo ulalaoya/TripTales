@@ -2,8 +2,8 @@ import { useRef, useState } from 'react'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { useStore, useCurrentMember } from '../store/useStore'
 import { useT } from '../i18n/useT'
-import { canPlanTrip } from '../lib/tripPermissions'
 import { todayISO } from '../lib/tripSelect'
+import { dayTabLabel } from '../lib/dayFormat'
 import type { Member } from '../types'
 import { Icon } from '../components/Icon'
 import { Avatar } from '../components/Avatar'
@@ -18,7 +18,6 @@ export function Moment() {
   const members = useStore((s) => s.members)
   const trip = useStore((s) => s.trips.find((x) => x.id === tripId))
   const addPhoto = useStore((s) => s.addPhoto)
-  const addEntry = useStore((s) => s.addEntry)
   const showToast = useStore((s) => s.showToast)
 
   const tripMembers = (trip?.members ?? []).map((id) => members.find((m) => m.id === id)).filter(Boolean) as Member[]
@@ -36,7 +35,6 @@ export function Moment() {
   const [error, setError] = useState('')
 
   if (!trip) return <Navigate to="/trips" replace />
-  const canJournal = canPlanTrip(trip, member) // journal entry allowed for trip-parents
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -57,20 +55,19 @@ export function Moment() {
       setError(t('askParentTrip'))
       return
     }
-    if (dataUrl) {
-      const status = addPhoto(trip!.id, dayId, { src: dataUrl, caption: caption.trim(), by: member.id, mood, people }, member.role)
-      showToast(status === 'pending' ? t('sentForApproval') : t('momentSaved'))
-      navigate(`/trips/${trip!.id}/album`)
-      return
-    }
-    // No photo → journal entry (trip-parents only).
-    if (!canJournal || !caption.trim()) {
+    // A photo is ALWAYS required — the journal is gone, a moment IS a photo.
+    if (!dataUrl) {
       setError(t('photoRequired'))
       return
     }
-    addEntry(trip!.id, dayId, { text: caption.trim(), mood, author: member.id, people })
-    showToast(t('momentSaved'))
-    navigate(`/trips/${trip!.id}`)
+    const status = addPhoto(
+      trip!.id,
+      dayId,
+      { src: dataUrl, caption: caption.trim(), by: member.id, mood, people },
+      member.role,
+    )
+    showToast(status === 'pending' ? t('sentForApproval') : t('momentSaved'))
+    navigate(`/trips/${trip!.id}/album`)
   }
 
   return (
@@ -97,7 +94,6 @@ export function Moment() {
             )}
           </button>
           <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
-          {canJournal && !dataUrl && <p className="text-xs text-[var(--muted)] text-center">{t('noPhotoOption')}</p>}
 
           {/* Caption */}
           <div>
@@ -169,7 +165,7 @@ export function Moment() {
             >
               {trip.days.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.title} · {d.date}
+                  {dayTabLabel(d.date)} · {d.title || t('dayNamePlaceholder')}
                 </option>
               ))}
             </select>

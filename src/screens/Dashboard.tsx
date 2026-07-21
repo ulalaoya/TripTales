@@ -175,10 +175,7 @@ export function Dashboard() {
                       />
                       <h3 className="font-hand text-lg truncate">{trip.name}</h3>
                     </div>
-                    <p className="text-xs text-[var(--muted)] mt-1 truncate">
-                      <bdi>{trip.destination}</bdi>
-                    </p>
-                    <p className="text-xs text-[var(--muted)] mt-0.5">
+                    <p className="text-xs text-[var(--muted)] mt-1">
                       <bdi>
                         {trip.startDate} – {trip.endDate}
                       </bdi>

@@ -72,8 +72,22 @@ export interface ChecklistGroup {
 }
 
 /**
+ * An optional file/link attached to an activity — e.g. a flight booking
+ * screenshot or a confirmation URL.
+ * - `photo`: `value` is a data-URL produced by a file input.
+ * - `link`:  `value` is an http(s) URL.
+ */
+export interface ActivityAttachment {
+  kind: 'photo' | 'link'
+  value: string
+  /** Optional display label (defaults to a generic one in the UI). */
+  label?: string
+}
+
+/**
  * A single planned activity slot on a day (attraction, restaurant, travel leg).
- * Order is the array order within `Day.activities`.
+ * Within a day, activities WITH a `time` are auto-sorted ascending and untimed
+ * ones keep their manual (drag) order after them — see `lib/sortActivities`.
  */
 export interface Activity {
   id: string
@@ -82,10 +96,12 @@ export interface Activity {
   time?: string
   /** Optional emoji picked from the preset row. */
   icon?: string
-  /** Optional location text → Google Maps chip. */
+  /** Optional place name OR pasted Maps/Waze link → navigation chip. */
   loc?: string
   /** Optional free-text notes. */
   notes?: string
+  /** Optional flight/booking details attachment. */
+  attachment?: ActivityAttachment
 }
 
 export interface Day {
@@ -101,7 +117,12 @@ export interface Day {
 export interface Trip {
   id: string
   name: string
-  destination: string
+  /**
+   * @deprecated Removed from the product (the trip NAME conveys the
+   * destination). Kept optional so persisted/seeded data still type-checks;
+   * nothing in the UI reads it.
+   */
+  destination?: string
   startDate: string
   endDate: string
   transport: Transport

@@ -8,17 +8,16 @@ import { buildDays } from '../lib/days'
 import { generateJoinCode } from '../lib/joinCode'
 import { buildInviteText } from '../lib/invite'
 import { RELATION_LABELS, defaultRoleFor } from '../lib/roleDefaults'
+import { todayISO } from '../lib/tripSelect'
+import { minReturnDate, isValidTripRange } from '../lib/tripDates'
+import { seedTransportActivities } from '../lib/transportSeed'
 import { AVATAR_GRADIENTS } from '../data/avatars'
 import { Icon } from '../components/Icon'
-import { Avatar } from '../components/Avatar'
 import { AvatarPicker } from '../components/AvatarPicker'
+import { ParticipantRow, type ParticipantDraft } from '../components/ParticipantRow'
 
-interface DraftMember {
+interface DraftMember extends ParticipantDraft {
   key: string
-  name: string
-  figure: Figure
-  color: string
-  role: Role
 }
 
 export function TripForm() {
@@ -27,10 +26,11 @@ export function TripForm() {
   const member = useCurrentMember()!
   const addTrip = useStore((s) => s.addTrip)
   const addMember = useStore((s) => s.addMember)
+  const updateProfile = useStore((s) => s.updateProfile)
+  const setMemberRole = useStore((s) => s.setMemberRole)
   const showToast = useStore((s) => s.showToast)
 
   const [name, setName] = useState('')
-  const [destination, setDestination] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [transport, setTransport] = useState<Transport>('flight')
@@ -49,6 +49,16 @@ export function TripForm() {
   // Route guard — children may not create trips.
   if (!can(member.role, 'trip.create')) return <Navigate to="/trips" replace />
 
+  // ----- Trip-date validation (future departure, return on/after departure) --
+  const today = todayISO()
+  const dateError =
+    startDate && startDate < today
+      ? t('errDateInPast')
+      : startDate && endDate && endDate < startDate
+        ? t('errDateOrder')
+        : ''
+  const datesOk = isValidTripRange(startDate, endDate, today)
+
   function pickRelation(label: string) {
     setDRelation(label)
     setDRole(defaultRoleFor(label))
@@ -58,7 +68,13 @@ export function TripForm() {
     if (!dName.trim() && !dRelation) return
     setDrafts((d) => [
       ...d,
-      { key: `d-${Date.now()}-${d.length}`, name: dName.trim() || dRelation, figure: dFigure, color: dColor, role: dRole },
+      {
+        key: `d-${Date.now()}-${d.length}`,
+        name: dName.trim() || dRelation,
+        figure: dFigure,
+        color: dColor,
+        role: dRole,
+      },
     ])
     setDName('')
     setDFigure('person')
@@ -66,6 +82,13 @@ export function TripForm() {
     setDRelation('')
     setDRole('ילד')
     setAddOpen(false)
+  }
+
+  /** Edit the current user's own row — name/figure/colour, and role if allowed. */
+  function editSelf(patch: Partial<ParticipantDraft>) {
+    const { role, ...rest } = patch
+    if (Object.keys(rest).length > 0) updateProfile(rest)
+    if (role && can(member.role, 'profile.editRole')) setMemberRole(member.id, role)
   }
 
   async function shareInvite() {
@@ -98,6 +121,7 @@ export function TripForm() {
 
   function save(e: React.FormEvent) {
     e.preventDefault()
+    if (!datesOk) return // blocked — the inline error is already announced
     // Create real members for each draft participant, collect all member ids.
     const draftIds = drafts.map((d) =>
       addMember({
@@ -109,10 +133,10 @@ export function TripForm() {
         email: undefined,
       }).id,
     )
-    const days = buildDays(startDate, endDate, [])
+    // Seed the first/last day with real, EDITABLE opening + closing legs.
+    const days = seedTransportActivities(buildDays(startDate, endDate, []), transport)
     const trip = addTrip({
       name,
-      destination,
       startDate,
       endDate,
       transport,
@@ -148,23 +172,21 @@ export function TripForm() {
             />
           </Field>
 
-          <Field label={t('destination')}>
-            <input
-              required
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              className="tap w-full rounded-[14px] px-3 py-2.5 bg-white border border-[var(--line)] outline-none"
-            />
-          </Field>
-
           <div className="grid grid-cols-2 gap-3">
             <Field label={t('startDate')}>
               <input
                 required
                 type="date"
                 dir="ltr"
+                min={today}
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setStartDate(v)
+                  // Keep the range coherent when departure moves past the return.
+                  if (endDate && v && endDate < v) setEndDate('')
+                }}
+                aria-invalid={!!dateError || undefined}
                 className="tap w-full rounded-[14px] px-3 py-2.5 bg-white border border-[var(--line)] outline-none"
               />
             </Field>
@@ -173,16 +195,27 @@ export function TripForm() {
                 required
                 type="date"
                 dir="ltr"
+                disabled={!startDate}
+                min={minReturnDate(startDate) || undefined}
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="tap w-full rounded-[14px] px-3 py-2.5 bg-white border border-[var(--line)] outline-none"
+                aria-invalid={!!dateError || undefined}
+                className="tap w-full rounded-[14px] px-3 py-2.5 bg-white border border-[var(--line)] outline-none disabled:opacity-50"
               />
             </Field>
           </div>
 
+          <p aria-live="polite" className="text-sm text-[var(--danger)] min-h-[1.25rem]">
+            {dateError}
+          </p>
+
           {/* Transport segmented toggle */}
           <Field label={t('transport')}>
-            <div className="inline-flex rounded-[14px] overflow-hidden border border-[var(--line)] bg-white" role="radiogroup" aria-label={t('transport')}>
+            <div
+              className="inline-flex rounded-[14px] overflow-hidden border border-[var(--line)] bg-white"
+              role="radiogroup"
+              aria-label={t('transport')}
+            >
               {(['flight', 'drive'] as Transport[]).map((tr) => (
                 <button
                   key={tr}
@@ -218,41 +251,26 @@ export function TripForm() {
             <span className="text-sm font-medium">{t('ideaOnly')}</span>
           </label>
 
-          {/* ===== Participants ===== */}
+          {/* ===== Participants — every row editable ===== */}
           <section className="pt-2">
             <h2 className="font-display text-lg mb-2">{t('wizardParticipants')}</h2>
             <ul className="space-y-2">
-              {/* Current user (auto-added) */}
-              <li className="member-card">
-                <Avatar figure={member.figure} color={member.color} size={44} />
-                <div className="min-w-0">
-                  <h4 className="text-sm font-semibold truncate">
-                    {member.name} <span className="text-[var(--muted)] font-normal">· {t('youLabel')}</span>
-                  </h4>
-                  <p className="text-[11px] text-[var(--muted)]">
-                    {member.role === 'מבוגר' ? t('roleAdultDesc') : t('roleChildDesc')}
-                  </p>
-                </div>
-                <span />
-              </li>
+              {/* Current user — editable, but never removable. */}
+              <ParticipantRow
+                value={{ name: member.name, figure: member.figure, color: member.color, role: member.role }}
+                isSelf
+                canEditRole={can(member.role, 'profile.editRole')}
+                onChange={editSelf}
+              />
               {drafts.map((d) => (
-                <li key={d.key} className="member-card">
-                  <Avatar figure={d.figure} color={d.color} size={44} />
-                  <div className="min-w-0">
-                    <h4 className="text-sm font-semibold truncate">{d.name}</h4>
-                    <p className="text-[11px] text-[var(--muted)]">
-                      {d.role === 'מבוגר' ? t('roleAdultDesc') : t('roleChildDesc')}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setDrafts((list) => list.filter((x) => x.key !== d.key))}
-                    aria-label={t('removeMember')}
-                    className="tap p-2 text-[var(--danger)]"
-                  >
-                    <Icon name="close" size={18} />
-                  </button>
-                </li>
+                <ParticipantRow
+                  key={d.key}
+                  value={d}
+                  onChange={(patch) =>
+                    setDrafts((list) => list.map((x) => (x.key === d.key ? { ...x, ...patch } : x)))
+                  }
+                  onRemove={() => setDrafts((list) => list.filter((x) => x.key !== d.key))}
+                />
               ))}
             </ul>
 
@@ -280,9 +298,30 @@ export function TripForm() {
                   value={dName}
                   onChange={(e) => setDName(e.target.value)}
                   placeholder={t('participantName')}
+                  aria-label={t('participantName')}
                   className="tap w-full rounded-[14px] px-3 py-2.5 bg-white border border-[var(--line)] outline-none"
                 />
                 <AvatarPicker figure={dFigure} color={dColor} onFigure={setDFigure} onColor={setDColor} />
+                <div
+                  className="inline-flex rounded-[14px] overflow-hidden border border-[var(--line)] bg-white"
+                  role="radiogroup"
+                  aria-label={t('roleLabel')}
+                >
+                  {(['מבוגר', 'ילד'] as Role[]).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      role="radio"
+                      aria-checked={dRole === r}
+                      onClick={() => setDRole(r)}
+                      className={`tap px-5 py-2 text-sm font-medium ${
+                        dRole === r ? 'bg-[var(--ink)] text-white' : 'text-[var(--ink)]'
+                      }`}
+                    >
+                      {r === 'מבוגר' ? t('roleAdult') : t('roleChild')}
+                    </button>
+                  ))}
+                </div>
                 <div className="flex gap-2">
                   <button type="button" onClick={addDraft} className="primary-btn tap px-4 text-sm">
                     {t('save')}
@@ -315,11 +354,19 @@ export function TripForm() {
                 </strong>
               </div>
               <div className="flex flex-col gap-2">
-                <button type="button" onClick={copyCode} className="tap px-3 py-2 rounded-[14px] bg-white border border-[var(--line)] text-sm inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={copyCode}
+                  className="tap px-3 py-2 rounded-[14px] bg-white border border-[var(--line)] text-sm inline-flex items-center gap-1"
+                >
                   <Icon name="check" size={16} />
                   {t('copyCode')}
                 </button>
-                <button type="button" onClick={shareInvite} className="tap px-3 py-2 rounded-[14px] bg-white border border-[var(--line)] text-sm inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={shareInvite}
+                  className="tap px-3 py-2 rounded-[14px] bg-white border border-[var(--line)] text-sm inline-flex items-center gap-1"
+                >
                   <Icon name="share" size={16} />
                   {t('share')}
                 </button>
@@ -327,7 +374,7 @@ export function TripForm() {
             </div>
           </section>
 
-          <button type="submit" className="primary-btn tap w-full py-3 text-lg">
+          <button type="submit" disabled={!datesOk} className="primary-btn tap w-full py-3 text-lg disabled:opacity-50">
             {t('createTripCta')}
           </button>
         </form>

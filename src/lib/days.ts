@@ -20,7 +20,9 @@ export function buildDays(start: string, end: string, existing: Day[]): Day[] {
     const iso = d.toISOString().slice(0, 10)
     const prev = existing.find((x) => x.date === iso)
     days.push(
-      prev ?? { id: `d-${iso}-${i}`, date: iso, title: `יום ${i + 1}`, activities: [], entries: [], photos: [] },
+      // New days start with an EMPTY name — the UI shows a 'יום חדש' placeholder
+      // and lets a trip-planner rename it inline.
+      prev ?? { id: `d-${iso}-${i}`, date: iso, title: '', activities: [], entries: [], photos: [] },
     )
   }
   return days

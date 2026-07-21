@@ -49,6 +49,15 @@ interface State {
   updateProfile: (patch: Partial<Pick<Member, 'name' | 'figure' | 'color' | 'role' | 'email'>>) => void
   /** Parent-only: change another member's role (R2 profile.editRole). */
   setMemberRole: (memberId: string, role: Role) => void
+  /**
+   * Parent-only: edit any member's editable fields (name / figure / colour /
+   * role) — powers the editable participant rows in the wizard and on
+   * /trips/:tripId/people.
+   */
+  updateMember: (
+    memberId: string,
+    patch: Partial<Pick<Member, 'name' | 'figure' | 'color' | 'role'>>,
+  ) => void
   logout: () => void
 
   addTrip: (
@@ -69,6 +78,9 @@ interface State {
   removeTripMember: (tripId: string, memberId: string) => void
   /** Join the trip whose join code matches `rawCode`, adding the current user. */
   joinTripByCode: (rawCode: string) => JoinResult
+
+  /** Rename a day (the day's NAME, shown as the heading inside the day view). */
+  updateDayTitle: (tripId: string, dayId: string, title: string) => void
 
   // ----- Day activities -----
   addActivity: (tripId: string, dayId: string, activity: Omit<Activity, 'id'>) => void
@@ -165,6 +177,13 @@ export const useStore = create<State>()(
           return { members: s.members.map((m) => (m.id === memberId ? { ...m, role } : m)) }
         }),
 
+      updateMember: (memberId, patch) =>
+        set((s) => {
+          const me = s.members.find((m) => m.id === s.currentUserId)
+          if (!me || me.role !== 'מבוגר') return {} // parent-only guard
+          return { members: s.members.map((m) => (m.id === memberId ? { ...m, ...patch } : m)) }
+        }),
+
       logout: () => set({ currentUserId: null }),
 
       addTrip: (t) => {
@@ -239,6 +258,11 @@ export const useStore = create<State>()(
         }))
         return { ok: true, tripId: trip.id }
       },
+
+      updateDayTitle: (tripId, dayId, title) =>
+        set((s) => ({
+          trips: mapTrip(s.trips, tripId, (t) => mapDays(t, dayId, (d) => ({ ...d, title }))),
+        })),
 
       // ----- Day activities -----
       addActivity: (tripId, dayId, activity) =>
