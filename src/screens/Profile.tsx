@@ -8,7 +8,7 @@ import { AvatarPicker } from '../components/AvatarPicker'
 import { Avatar } from '../components/Avatar'
 import { Icon } from '../components/Icon'
 import { LangToggle } from '../components/LangToggle'
-import { BrandMark } from '../components/Logo'
+import { Logo } from '../components/Logo'
 
 export function Profile() {
   const t = useT()
@@ -43,7 +43,7 @@ export function Profile() {
           </button>
           <div className="flex items-center gap-2">
             <LangToggle />
-            <BrandMark size={28} />
+            <Logo size="sm" />
           </div>
         </header>
 

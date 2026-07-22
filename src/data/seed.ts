@@ -92,126 +92,21 @@ function photoSvg(hue: string, label: string): string {
   </svg>`
 }
 
-export const SEED_MEMBERS: Member[] = [
-  {
-    id: 'm-parent',
-    phone: '0501234567',
-    name: 'אבא',
-    role: 'מבוגר',
-    figure: 'camera',
-    color: 'linear-gradient(145deg,#42b8d4,#67d3bd)',
-    email: 'aba@triptales.example',
-  },
-  {
-    id: 'm-child',
-    phone: '0527654321',
-    name: 'בן',
-    role: 'ילד',
-    figure: 'surfboard',
-    color: 'linear-gradient(145deg,#ff6b66,#ff9a78)',
-  },
-]
+/**
+ * A BRAND-NEW install starts completely EMPTY (Galli feedback — Item 1):
+ * no demo trips and no demo members leak to anyone who opens the shared link.
+ * A fresh user onboards (phone → name → avatar), lands on the empty /trips
+ * screen, and then either plans a trip or joins one with a code.
+ *
+ * These are ONLY the first-run defaults: Zustand persist applies them just when
+ * there is no persisted state, so existing users (e.g. Galli) keep all of their
+ * own data. `makeDriveTrip` / `makeDefaultChecklist` / `makeGalileeChecklist`
+ * / `photoSvg` stay exported/intact because the persist migrations in
+ * `store/useStore.ts` still reference them for existing stores.
+ */
+export const SEED_MEMBERS: Member[] = []
 
-export const SEED_TRIPS: Trip[] = [
-  {
-    id: 't-flight',
-    name: 'קיץ ביוון',
-    destination: 'סנטוריני, יוון',
-    startDate: '2025-07-10',
-    endDate: '2025-07-15',
-    transport: 'flight',
-    order: 0,
-    members: ['m-parent', 'm-child'],
-    joinCode: 'GREEK7',
-    checklist: makeDefaultChecklist('t-flight'),
-    days: [
-      {
-        id: 't-flight-d1',
-        date: '2025-07-10',
-        title: 'יום ההגעה',
-        activities: [
-          { id: 't-flight-d1-a1', title: 'איסוף רכב שכור', time: '15:00', icon: '🚗', loc: 'שדה התעופה סנטוריני' },
-          { id: 't-flight-d1-a2', title: 'צ׳ק-אין במלון', time: '16:30', icon: '🏨', loc: 'Oia, Santorini' },
-          { id: 't-flight-d1-a3', title: 'ארוחת ערב מול השקיעה', time: '19:30', icon: '🍽️', loc: 'Ambrosia Restaurant, Oia', notes: 'להזמין מקום ליד המעקה' },
-        ],
-        entries: [
-          {
-            id: 'e1',
-            text: 'המראה חלקה ונחיתה מושלמת. הים כחול כמו בגלויות!',
-            mood: '😍',
-            loc: 'שדה התעופה סנטוריני',
-            author: 'm-parent',
-            ts: Date.parse('2025-07-10T14:00:00'),
-            reacts: { '❤️': ['m-child'], '😮': ['m-child'] },
-          },
-        ],
-        photos: [
-          {
-            id: 'p1',
-            svg: photoSvg('#4a86b8', 'Santorini'),
-            caption: 'המבט הראשון על הקלדרה',
-            fav: true,
-            by: 'm-parent',
-            status: 'approved',
-            reacts: { '⭐': ['m-child'] },
-          },
-          {
-            id: 'p2',
-            svg: photoSvg('#c98a5a', 'Sunset'),
-            caption: 'שקיעה מהמרפסת (מחכה לאישור)',
-            fav: false,
-            by: 'm-child',
-            status: 'pending',
-            reacts: {},
-          },
-        ],
-      },
-      {
-        id: 't-flight-d2',
-        date: '2025-07-11',
-        title: 'שיט בקלדרה',
-        activities: [
-          { id: 't-flight-d2-a1', title: 'שיט אל ההר הגעשי', time: '10:00', icon: '⛵', loc: 'Old Port, Fira' },
-          { id: 't-flight-d2-a2', title: 'רחצה במעיינות החמים', time: '12:00', icon: '🌊' },
-          { id: 't-flight-d2-a3', title: 'צהריים בטברנה', time: '14:00', icon: '🍽️', loc: 'To Psaraki, Vlychada' },
-        ],
-        entries: [
-          {
-            id: 'e2',
-            text: 'שחינו במעיינות החמים ליד ההר הגעשי.',
-            mood: '🌊',
-            author: 'm-parent',
-            ts: Date.parse('2025-07-11T11:30:00'),
-            reacts: { '🍦': ['m-child'] },
-          },
-        ],
-        photos: [
-          {
-            id: 'p3',
-            svg: photoSvg('#2f7d8c', 'Volcano'),
-            caption: 'ההר הגעשי מקרוב',
-            fav: false,
-            by: 'm-parent',
-            status: 'approved',
-            reacts: {},
-          },
-        ],
-      },
-      {
-        id: 't-flight-d3',
-        date: '2025-07-15',
-        title: 'יום החזרה',
-        activities: [
-          { id: 't-flight-d3-a1', title: 'קניות מזכרות בפירה', time: '09:00', icon: '🛍️', loc: 'Fira, Santorini' },
-          { id: 't-flight-d3-a2', title: 'החזרת רכב', time: '12:00', icon: '🚗', loc: 'שדה התעופה סנטוריני' },
-        ],
-        entries: [],
-        photos: [],
-      },
-    ],
-  },
-  makeDriveTrip(),
-]
+export const SEED_TRIPS: Trip[] = []
 
 /**
  * Galli's REAL family trip — a full week in the Lower Galilee, fixed dates

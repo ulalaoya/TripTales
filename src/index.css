@@ -160,6 +160,20 @@ body {
 .primary-btn:hover { box-shadow: 0 12px 24px rgba(255, 107, 102, .3); }
 .primary-btn:active { transform: translateY(1px); }
 
+/* Secondary CTA — coral-outline pill. As prominent/tappable as .primary-btn,
+   pairs with it for "join with a code" (Galli feedback — Item 1). */
+.secondary-btn {
+  border: 2px solid var(--coral);
+  color: var(--coral);
+  background: #fff;
+  border-radius: 16px;
+  min-height: 47px;
+  font-weight: 800;
+  transition: transform .15s ease, box-shadow .2s ease;
+}
+.secondary-btn:hover { box-shadow: 0 10px 22px rgba(255, 107, 102, .2); }
+.secondary-btn:active { transform: translateY(1px); }
+
 /* Gradient rounded-square avatar — white glyph on a gradient tile. */
 .av {
   display: grid;

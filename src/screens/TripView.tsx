@@ -58,8 +58,13 @@ export function TripView() {
   const [dayIdx, setDayIdx] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
+  // Reorder only on a deliberate LONG-PRESS (Galli feedback — Item 2). With a
+  // delay + tolerance activation, a quick swipe over the list scrolls normally
+  // and a drag begins only after a ~250ms press-and-hold on an activity; moving
+  // more than `tolerance` px before the delay elapses cancels it (= a scroll).
+  // The KeyboardSensor and the "העברה ליום…" <select> keep a11y reordering.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 

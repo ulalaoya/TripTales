@@ -11,7 +11,7 @@ import { todayISO } from '../lib/tripSelect'
 import { isValidJoinCodeFormat } from '../lib/joinCode'
 import type { Trip, Member } from '../types'
 import { Icon } from '../components/Icon'
-import { Logo } from '../components/Logo'
+import { Logo, BrandMark } from '../components/Logo'
 import { LangToggle } from '../components/LangToggle'
 import { Avatar } from '../components/Avatar'
 import { SyncBadge } from '../components/SyncBadge'
@@ -48,6 +48,8 @@ export function Dashboard() {
   const byId = (id: string): Member | undefined => members.find((m) => m.id === id)
   const sorted = [...trips].sort((a, b) => a.order - b.order)
   const visible = sorted.filter((tr) => matchesTab(tripStatus(tr, today), tab))
+  // A brand-new (or cleaned-out) user has no trips at all → friendly empty state.
+  const hasTrips = trips.length > 0
 
   const TABS: { id: Tab; label: string }[] = [
     { id: 'all', label: t('tabAll') },
@@ -145,7 +147,7 @@ export function Dashboard() {
 
         <div className="flex items-center justify-between mb-3">
           <h1 className="font-display text-2xl">{t.fn('allTripsOf')(member.name.split(' ')[0] || member.name)}</h1>
-          {can(member.role, 'trip.edit') && (
+          {hasTrips && can(member.role, 'trip.edit') && (
             <button
               type="button"
               onClick={() => setEditMode((v) => !v)}
@@ -156,23 +158,36 @@ export function Dashboard() {
           )}
         </div>
 
-        {/* Tabs */}
-        <div className="tabs mb-4" role="tablist" aria-label={t('allTrips')}>
-          {TABS.map((tb) => (
-            <button
-              key={tb.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === tb.id}
-              onClick={() => setTab(tb.id)}
-              className={`tab tap ${tab === tb.id ? 'active' : ''}`}
-            >
-              {tb.label}
-            </button>
-          ))}
-        </div>
+        {/* Tabs — only meaningful once there is at least one trip */}
+        {hasTrips && (
+          <div className="tabs mb-4" role="tablist" aria-label={t('allTrips')}>
+            {TABS.map((tb) => (
+              <button
+                key={tb.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === tb.id}
+                onClick={() => setTab(tb.id)}
+                className={`tab tap ${tab === tb.id ? 'active' : ''}`}
+              >
+                {tb.label}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {visible.length === 0 && <p className="text-[var(--muted)]">{t('noTrips')}</p>}
+        {/* Empty state — clean, EMPTY app for a fresh user (Galli feedback — Item 1) */}
+        {!hasTrips && (
+          <div className="journal-lined text-center px-5 py-9 mb-2">
+            <span className="inline-block mb-3">
+              <BrandMark size={56} />
+            </span>
+            <h2 className="font-display text-xl mb-1">{t('noTrips')}</h2>
+            <p className="text-sm text-[var(--muted)]">{t('emptyTripsBody')}</p>
+          </div>
+        )}
+
+        {hasTrips && visible.length === 0 && <p className="text-[var(--muted)]">{t('noTrips')}</p>}
 
         <ul className="space-y-3">
           {visible.map((trip, i) => {
@@ -267,20 +282,22 @@ export function Dashboard() {
           })}
         </ul>
 
-        {/* Primary CTA — plan a new trip (adults only) */}
-        {can(member.role, 'trip.create') && (
-          <button
-            type="button"
-            onClick={() => navigate('/trips/new')}
-            className="primary-btn tap w-full py-3 text-lg mt-4 inline-flex items-center justify-center gap-2"
-          >
-            <Icon name="plus" size={20} />
-            {t('planTrip')}
-          </button>
-        )}
+        {/* Prominent actions — both coral CTAs (Galli feedback — Item 1).
+            "תכנון טיול חדש" stays adult-only; "הצטרפות עם קוד" is for everyone. */}
+        <div className="mt-4 space-y-3">
+          {/* Primary CTA — plan a new trip (adults only) */}
+          {can(member.role, 'trip.create') && !joinOpen && (
+            <button
+              type="button"
+              onClick={() => navigate('/trips/new')}
+              className="primary-btn tap w-full py-3 text-lg inline-flex items-center justify-center gap-2"
+            >
+              <Icon name="plus" size={20} />
+              {t('planTrip')}
+            </button>
+          )}
 
-        {/* Secondary — join with a code */}
-        <div className="mt-3">
+          {/* Secondary CTA — join with a code (everyone) */}
           {joinOpen ? (
             <form onSubmit={submitJoin} className="journal-lined p-4 space-y-3">
               <label htmlFor="join-code" className="block text-sm font-medium">
@@ -317,8 +334,12 @@ export function Dashboard() {
               </div>
             </form>
           ) : (
-            <button type="button" onClick={() => setJoinOpen(true)} className="add-card tap">
-              <Icon name="users" size={18} />
+            <button
+              type="button"
+              onClick={() => setJoinOpen(true)}
+              className="secondary-btn tap w-full py-3 text-lg inline-flex items-center justify-center gap-2"
+            >
+              <Icon name="users" size={20} />
               {t('joinWithCode')}
             </button>
           )}

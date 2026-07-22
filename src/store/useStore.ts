@@ -589,7 +589,7 @@ export const useStore = create<State>()(
     }),
     {
       name: 'triptales-store',
-      version: 4,
+      version: 5,
       partialize: (s) => ({
         lang: s.lang,
         members: s.members,
@@ -602,6 +602,10 @@ export const useStore = create<State>()(
        *           and give every day an empty `activities` array.
        * v3 -> v4: replace the old demo weekend trip with the real Galilee trip —
        *           but ONLY if the user never renamed it, so real edits are never lost.
+       * v4 -> v5: auto-remove the local-only Santorini demo trip (fixed id
+       *           `t-flight`) from existing stores (Galli chose "delete
+       *           automatically"). Only the fixed demo id is dropped — never a
+       *           user-created trip — and it is idempotent (safe if already gone).
        */
       migrate: (persisted, version) => {
         const state = persisted as { trips?: Trip[]; members?: Member[] } | undefined
@@ -626,6 +630,11 @@ export const useStore = create<State>()(
               ? { ...makeDriveTrip(), order: t.order }
               : t,
           )
+        }
+        if (version < 5 && Array.isArray(state.trips)) {
+          // Remove ONLY the fixed Santorini demo id; user trips carry generated
+          // ids (`t-<base36>-<n>`) and can never match this literal.
+          state.trips = state.trips.filter((t) => t.id !== 't-flight')
         }
         return state as never
       },

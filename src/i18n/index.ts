@@ -99,6 +99,7 @@ export const STRINGS = {
     // ----- trips -----
     allTrips: 'כל הטיולים',
     tabAll: 'הכל',
+    emptyTripsBody: 'תכננו טיול חדש, או הצטרפו לטיול קיים עם קוד הזמנה',
     participantsCount: (n: number) => `${n} משתתפים`,
     ideaOnly: 'רעיון בלבד',
     createTrip: 'יצירת טיול חדש',
@@ -305,6 +306,7 @@ export const STRINGS = {
     // ----- trips -----
     allTrips: 'All trips',
     tabAll: 'All',
+    emptyTripsBody: 'Plan a new trip, or join an existing one with an invite code',
     participantsCount: (n: number) => `${n} travellers`,
     ideaOnly: 'Idea only',
     createTrip: 'Create new trip',

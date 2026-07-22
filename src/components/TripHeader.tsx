@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useT } from '../i18n/useT'
 import type { Trip } from '../types'
 import { Icon } from './Icon'
-import { BrandMark } from './Logo'
+import { Logo } from './Logo'
 
 interface Props {
   trip: Trip
@@ -16,7 +16,8 @@ interface Props {
 /**
  * Shared in-trip screen header (Galli feedback #2, #3, #18):
  *  • a visible back control on the right (RTL) that returns to the trips list,
- *  • the small TripTales mark pinned to the visual-left,
+ *  • the small TripTales mark + wordmark pinned to the visual-left (Item 4) —
+ *    kept small so the big, bold TRIP NAME below stays the screen's focal point,
  *  • the TRIP NAME as the big, bold focal point of every in-trip screen,
  *  • an optional small subtitle (the current screen's name).
  */
@@ -35,7 +36,7 @@ export function TripHeader({ trip, subtitle, action }: Props) {
           <Icon name="chevron" size={18} className="dir-back" />
           {t('back')}
         </button>
-        <BrandMark size={28} />
+        <Logo size="sm" />
       </div>
 
       <div className="flex items-start justify-between gap-2">
