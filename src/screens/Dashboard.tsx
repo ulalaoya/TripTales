@@ -5,10 +5,11 @@ import { useT } from '../i18n/useT'
 import { can } from '../lib/permissions'
 import { buildInviteText } from '../lib/invite'
 import { checklistProgress } from '../lib/checklist'
+import { coverPhotoOf } from '../lib/tripCover'
 import { tripStatus, statusLabel, statusTag, type TripStatus } from '../lib/tripStatus'
 import { todayISO } from '../lib/tripSelect'
 import { isValidJoinCodeFormat } from '../lib/joinCode'
-import type { Trip, Photo, Member } from '../types'
+import type { Trip, Member } from '../types'
 import { Icon } from '../components/Icon'
 import { Logo } from '../components/Logo'
 import { LangToggle } from '../components/LangToggle'
@@ -18,14 +19,6 @@ import { isCloudEnabled } from '../lib/firebase'
 import { cloudJoinByCode } from '../lib/cloud'
 
 type Tab = 'all' | 'planned' | 'ended' | 'idea'
-
-function coverPhoto(trip: Trip): Photo | undefined {
-  for (const d of trip.days) {
-    const p = d.photos.find((x) => x.status === 'approved')
-    if (p) return p
-  }
-  return undefined
-}
 
 function matchesTab(status: TripStatus, tab: Tab): boolean {
   if (tab === 'all') return true
@@ -151,7 +144,7 @@ export function Dashboard() {
         </header>
 
         <div className="flex items-center justify-between mb-3">
-          <h1 className="font-display text-2xl">{t('allTrips')}</h1>
+          <h1 className="font-display text-2xl">{t.fn('allTripsOf')(member.name.split(' ')[0] || member.name)}</h1>
           {can(member.role, 'trip.edit') && (
             <button
               type="button"
@@ -185,7 +178,7 @@ export function Dashboard() {
           {visible.map((trip, i) => {
             const status = tripStatus(trip, today)
             const pct = checklistProgress(trip.checklist).pct
-            const cover = coverPhoto(trip)
+            const cover = coverPhotoOf(trip)
             const tripMembers = trip.members.map(byId).filter(Boolean) as Member[]
             return (
               <li key={trip.id} className="trip-card p-2.5">

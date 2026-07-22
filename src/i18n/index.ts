@@ -140,9 +140,11 @@ export const STRINGS = {
     // ----- trip-centric IA (bottom nav) -----
     navGear: 'ציוד',
     navPeople: 'משתתפים',
+    navSettings: 'הגדרות',
     // ----- home / trips -----
     planTrip: 'תכנון טיול חדש',
     joinWithCode: 'הצטרפות עם קוד',
+    allTripsOf: (name: string) => `כל הטיולים של ${name}`,
     // ----- trip wizard -----
     newTripTitle: 'תכנון טיול חדש',
     wizardParticipants: 'מי מגיע?',
@@ -168,6 +170,7 @@ export const STRINGS = {
     editActivity: 'עריכת פעילות',
     activityTitle: 'מה עושים?',
     activityTime: 'שעה',
+    activityTimeLabel: 'שעה משוערת לפעילות',
     activityIcon: 'סמל',
     activityNotes: 'הערות',
     moveToDay: 'העברה ליום…',
@@ -188,7 +191,13 @@ export const STRINGS = {
     filterByDay: 'לפי יום',
     // ----- trip settings -----
     tripSettings: 'הגדרות הטיול',
+    editTripTitle: 'עריכת הטיול',
     editDates: 'עריכת תאריכים',
+    tripIconLabel: 'סמל הטיול',
+    coverPhotoLabel: 'תמונת שער',
+    chooseCover: 'בחירת תמונת שער',
+    noApprovedPhotos: 'אין עדיין תמונות מאושרות לבחירה',
+    coverFirstPhoto: 'ברירת מחדל (התמונה הראשונה)',
     shrinkWarnTitle: 'למחוק ימים?',
     shrinkWarnBody: (n: number) => `הטווח החדש ימחק ${n} ימים שיש בהם תוכן (פעילויות, יומן או תמונות). להמשיך?`,
     confirm: 'אישור',
@@ -337,9 +346,11 @@ export const STRINGS = {
     // ----- trip-centric IA (bottom nav) -----
     navGear: 'Packing',
     navPeople: 'Members',
+    navSettings: 'Settings',
     // ----- home / trips -----
     planTrip: 'Plan a new trip',
     joinWithCode: 'Join with a code',
+    allTripsOf: (name: string) => `${name}'s trips`,
     // ----- trip wizard -----
     newTripTitle: 'Plan a new trip',
     wizardParticipants: "Who's coming?",
@@ -365,6 +376,7 @@ export const STRINGS = {
     editActivity: 'Edit activity',
     activityTitle: 'What are you doing?',
     activityTime: 'Time',
+    activityTimeLabel: 'Estimated activity time',
     activityIcon: 'Icon',
     activityNotes: 'Notes',
     moveToDay: 'Move to day…',
@@ -385,7 +397,13 @@ export const STRINGS = {
     filterByDay: 'By day',
     // ----- trip settings -----
     tripSettings: 'Trip settings',
+    editTripTitle: 'Edit trip',
     editDates: 'Edit dates',
+    tripIconLabel: 'Trip icon',
+    coverPhotoLabel: 'Cover photo',
+    chooseCover: 'Choose cover photo',
+    noApprovedPhotos: 'No approved photos to choose yet',
+    coverFirstPhoto: 'Default (first photo)',
     shrinkWarnTitle: 'Delete days?',
     shrinkWarnBody: (n: number) => `The new range will delete ${n} day(s) that have content (activities, journal or photos). Continue?`,
     confirm: 'Confirm',

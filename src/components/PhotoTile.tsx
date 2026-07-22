@@ -37,6 +37,21 @@ export function PhotoTile({ photo, tripId, dayId, isParent, member, author }: Pr
             {t('pending')}
           </div>
         )}
+        {/* Favourite is a clearly-labelled STAR on the image corner — no longer a
+            heart next to the name that got confused with the chosen reaction
+            emoji (Galli feedback #13). */}
+        {photo.status === 'approved' && (
+          <button
+            type="button"
+            onClick={() => toggleFav(tripId, dayId, photo.id)}
+            aria-pressed={photo.fav}
+            aria-label={t('favourite')}
+            className="tap absolute top-1 z-10 p-1.5"
+            style={{ insetInlineEnd: 6, color: photo.fav ? 'var(--sun)' : '#fff' }}
+          >
+            <Icon name="star" size={20} style={photo.fav ? { fill: 'currentColor' } : undefined} />
+          </button>
+        )}
         {photo.svg ? (
           <span dangerouslySetInnerHTML={{ __html: photo.svg }} />
         ) : (
@@ -47,18 +62,13 @@ export function PhotoTile({ photo, tripId, dayId, isParent, member, author }: Pr
 
       {photo.status === 'approved' && (
         <div className="mt-1">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => toggleFav(tripId, dayId, photo.id)}
-              aria-pressed={photo.fav}
-              aria-label={t('favourite')}
-              className="tap p-1 text-[var(--coral)]"
-            >
-              <Icon name={photo.fav ? 'heartFilled' : 'heart'} size={20} />
-            </button>
-            {author && <span className="text-[10px] text-[var(--muted)]">{author.name}</span>}
-          </div>
+          {/* [uploader name] · [emoji reactions from members] — no decorative heart */}
+          {author && (
+            <div className="flex items-center gap-1 text-[11px]">
+              <span className="font-semibold text-[var(--ink)] truncate">{author.name}</span>
+              <span className="text-[var(--muted)]" aria-hidden>·</span>
+            </div>
+          )}
           <ReactionBar
             reacts={photo.reacts}
             memberId={member.id}

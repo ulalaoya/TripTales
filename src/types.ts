@@ -142,6 +142,13 @@ export interface Trip {
   joinCode: string
   /** When true the trip is a loose idea (status derived as 'idea'). */
   idea?: boolean
+  /**
+   * Chosen cover photo id (Galli feedback #20). A planner may pin any approved
+   * photo across the album as the trip's representative cover; when unset (or
+   * the chosen photo is gone/unapproved) the first approved photo is used. See
+   * `lib/tripCover.coverPhotoOf`.
+   */
+  coverPhotoId?: string
   /** Equipment / packing checklist groups. */
   checklist?: ChecklistGroup[]
   /**

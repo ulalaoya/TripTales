@@ -6,7 +6,7 @@ import type { StringKey } from '../i18n'
 
 /**
  * Contextual bottom tab bar — rendered ONLY inside a trip (`/trips/:tripId/*`).
- * Tabs: תכנון · אלבום · ➕ (raised center) · ציוד · משתתפים.
+ * Tabs: תכנון · אלבום · ➕ (raised center) · ציוד · הגדרות.
  */
 export function TripBottomNav({ tripId }: { tripId: string }) {
   const t = useT()
@@ -23,7 +23,7 @@ export function TripBottomNav({ tripId }: { tripId: string }) {
         <Icon name="plus" size={26} />
       </NavLink>
       <NavItem to={`${base}/checklist`} icon="checkSquare" labelKey="navGear" t={t} />
-      <NavItem to={`${base}/people`} icon="users" labelKey="navPeople" t={t} />
+      <NavItem to={`${base}/people`} icon="users" labelKey="navSettings" t={t} />
     </nav>
   )
 }

@@ -92,13 +92,7 @@ export function NewTraveller() {
             </div>
           </div>
 
-          {/* figure picker */}
-          <div>
-            <label className="block text-sm font-medium mb-2">{t('chooseFigure')}</label>
-            <AvatarPicker figure={figure} color={color} onFigure={setFigure} onColor={setColor} />
-          </div>
-
-          {/* name */}
+          {/* name — sits right after picking the role/figure (Galli feedback #5) */}
           <div>
             <label htmlFor="nt-name" className="block text-sm font-medium mb-1">
               {t('nameLabel')}
@@ -110,6 +104,12 @@ export function NewTraveller() {
               placeholder={t('namePlaceholder')}
               className="tap w-full rounded-[14px] px-3 py-2.5 bg-white border border-[var(--line)] outline-none"
             />
+          </div>
+
+          {/* figure / avatar picker */}
+          <div>
+            <label className="block text-sm font-medium mb-2">{t('chooseFigure')}</label>
+            <AvatarPicker figure={figure} color={color} onFigure={setFigure} onColor={setColor} />
           </div>
 
           {/* role segmented toggle */}

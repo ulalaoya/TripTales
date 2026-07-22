@@ -6,6 +6,7 @@ import { canApprovePhotos } from '../lib/tripPermissions'
 import { dayTabLabel } from '../lib/dayFormat'
 import type { Photo, Member } from '../types'
 import { PhotoTile } from '../components/PhotoTile'
+import { TripHeader } from '../components/TripHeader'
 
 type Tab = 'all' | 'day' | 'fav'
 
@@ -26,10 +27,7 @@ export function Album() {
   return (
     <div className="paper min-h-full">
       <div className="max-w-column mx-auto px-5 py-5">
-        <h1 className="font-display text-2xl mb-1">{t('album')}</h1>
-        <p className="text-sm text-[var(--muted)] mb-4">
-          <bdi>{trip.name}</bdi>
-        </p>
+        <TripHeader trip={trip} subtitle={t('album')} />
 
         <div className="tabs mb-4" role="tablist" aria-label={t('album')}>
           {([

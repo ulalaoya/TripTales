@@ -1,16 +1,17 @@
 import { useState } from 'react'
-import { useNavigate, useParams, Navigate } from 'react-router-dom'
+import { useParams, Navigate } from 'react-router-dom'
 import { useStore, useCurrentMember } from '../store/useStore'
 import { useT } from '../i18n/useT'
 import { checklistProgress, groupProgress, canEditChecklist } from '../lib/checklist'
+import { canAddChecklistItem } from '../lib/checklistPerms'
 import type { ChecklistGroup, Member } from '../types'
 import { Icon } from '../components/Icon'
+import { TripHeader } from '../components/TripHeader'
 
 const GROUP_EMOJIS = ['🎒', '👕', '🧴', '🎫', '🍫', '🧸', '🔌', '💊']
 
 export function Checklist() {
   const t = useT()
-  const navigate = useNavigate()
   const { tripId } = useParams()
   const member = useCurrentMember()!
   const members = useStore((s) => s.members)
@@ -26,6 +27,7 @@ export function Checklist() {
   if (!trip) return <Navigate to="/trips" replace />
 
   const canEdit = canEditChecklist(member.role)
+  const canAddItem = canAddChecklistItem(member.role)
   const checklist = trip.checklist ?? []
   const { done, total, pct } = checklistProgress(checklist)
   const memberName = (id: string): string =>
@@ -43,19 +45,7 @@ export function Checklist() {
   return (
     <div className="paper min-h-full">
       <div className="max-w-column mx-auto px-5 py-5">
-        <button
-          type="button"
-          onClick={() => navigate(`/trips/${trip.id}`)}
-          className="tap inline-flex items-center gap-1 text-[var(--ink)] mb-4"
-        >
-          <Icon name="chevron" size={18} className="dir-back" />
-          {t('back')}
-        </button>
-
-        <h1 className="font-hand text-2xl">{t('packTitle')}</h1>
-        <div className="text-sm text-[var(--muted)] mb-4">
-          <bdi>{trip.name}</bdi>
-        </div>
+        <TripHeader trip={trip} subtitle={t('packTitle')} />
 
         {/* Progress head */}
         <div className="check-head mb-4">
@@ -81,6 +71,7 @@ export function Checklist() {
               group={group}
               tripId={trip.id}
               canEdit={canEdit}
+              canAddItem={canAddItem}
               members={members}
               memberName={memberName}
               onToggle={(itemId) => toggleItem(trip.id, group.id, itemId)}
@@ -144,6 +135,7 @@ function ChecklistGroupCard({
   group,
   tripId,
   canEdit,
+  canAddItem,
   members,
   memberName,
   onToggle,
@@ -151,6 +143,7 @@ function ChecklistGroupCard({
   group: ChecklistGroup
   tripId: string
   canEdit: boolean
+  canAddItem: boolean
   members: Member[]
   memberName: (id: string) => string
   onToggle: (itemId: string) => void
@@ -223,8 +216,8 @@ function ChecklistGroupCard({
         ))}
       </div>
 
-      {/* Add item — parent only */}
-      {canEdit && (
+      {/* Add item — open to EVERY member (Galli feedback #16) */}
+      {canAddItem && (
         <form onSubmit={submitItem} className="flex flex-wrap items-center gap-2 mt-2">
           <input
             value={label}

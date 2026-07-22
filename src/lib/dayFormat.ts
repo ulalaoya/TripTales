@@ -41,3 +41,23 @@ export function dayTabLabel(iso: string): string {
   if (!p) return ''
   return `${hebrewWeekday(iso)} · ${p.d}.${p.m}`
 }
+
+/**
+ * Full Hebrew weekday WORD for an ISO date — the single-letter `hebrewWeekday`
+ * prefixed with 'יום ': '2026-08-10' (a Monday) -> 'יום ב׳'. Returns '' for a
+ * malformed date. Used for the two-line day tabs (Galli feedback #4).
+ */
+export function weekdayWord(iso: string): string {
+  const w = hebrewWeekday(iso)
+  return w ? `יום ${w}` : ''
+}
+
+/**
+ * Just the day.month part of a date, no leading zeros: '2026-08-10' -> '10.8'.
+ * The bottom line of a two-line day tab. Returns '' for a malformed date.
+ */
+export function dayMonth(iso: string): string {
+  const p = parseISO(iso)
+  if (!p) return ''
+  return `${p.d}.${p.m}`
+}

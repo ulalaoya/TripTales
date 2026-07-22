@@ -15,6 +15,7 @@ import { AVATAR_GRADIENTS } from '../data/avatars'
 import { Icon } from '../components/Icon'
 import { AvatarPicker } from '../components/AvatarPicker'
 import { ParticipantRow, type ParticipantDraft } from '../components/ParticipantRow'
+import { BrandMark } from '../components/Logo'
 
 interface DraftMember extends ParticipantDraft {
   key: string
@@ -151,14 +152,17 @@ export function TripForm() {
   return (
     <div className="paper min-h-full">
       <div className="max-w-column mx-auto px-5 py-5">
-        <button
-          type="button"
-          onClick={() => navigate('/trips')}
-          className="tap inline-flex items-center gap-1 text-[var(--ink)] mb-4"
-        >
-          <Icon name="chevron" size={18} className="dir-back" />
-          {t('back')}
-        </button>
+        <header className="flex justify-between items-center mb-4">
+          <button
+            type="button"
+            onClick={() => navigate('/trips')}
+            className="tap inline-flex items-center gap-1 text-[var(--ink)]"
+          >
+            <Icon name="chevron" size={18} className="dir-back" />
+            {t('back')}
+          </button>
+          <BrandMark size={28} />
+        </header>
 
         <h1 className="font-display text-2xl mb-4">{t('newTripTitle')}</h1>
 

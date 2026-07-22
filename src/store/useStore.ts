@@ -17,6 +17,8 @@ import { normalizePhone } from '../lib/phone'
 import { toggleReact } from '../lib/reactions'
 import { uploadStatusFor } from '../lib/permissions'
 import { canEditChecklist } from '../lib/checklist'
+import { canAddChecklistItem } from '../lib/checklistPerms'
+import { isCloudEnabled } from '../lib/firebase'
 import { generateJoinCode } from '../lib/joinCode'
 import { canJoinWithCode } from '../lib/tripPermissions'
 import { reorderActivities, moveActivityToDay } from '../lib/activities'
@@ -148,9 +150,43 @@ interface State {
 let idc = 0
 const uid = (p: string) => `${p}-${Date.now().toString(36)}-${(idc++).toString(36)}`
 
+/**
+ * The seed/demo trips a fresh install ships with. On login the current user is
+ * made a member of these (Galli feedback root-cause A) so whoever uses the app
+ * owns their own demo/Galilee trips — can fully edit them and appears in the
+ * participants list. We never auto-join trips the user merely joined by code
+ * that belong to others (those carry different ids).
+ */
+const SEED_TRIP_IDS = ['t-flight', 't-drive']
+
+/**
+ * Cloud last-write-wins stamp bump after a LOCAL edit. In local mode (no
+ * Firebase) this is a no-op, so persisted local data stays byte-for-byte
+ * identical; in cloud mode it stamps `updatedAt = Date.now()` so a fresh local
+ * edit always wins over a stale echoed snapshot (Galli feedback root-cause B —
+ * day titles were being clobbered before the debounced push fired).
+ */
+function touch(trip: Trip): Trip {
+  return isCloudEnabled ? { ...trip, updatedAt: Date.now() } : trip
+}
+
+/** Add the current user to any seed trip they are not yet a member of. */
+function withSelfInSeedTrips(trips: Trip[], memberId: string): Trip[] {
+  return trips.map((t) =>
+    SEED_TRIP_IDS.includes(t.id) && !t.members.includes(memberId)
+      ? touch({ ...t, members: [...t.members, memberId] })
+      : t,
+  )
+}
+
 /** Map one trip in state, immutably. */
 function mapTrip(trips: Trip[], tripId: string, fn: (t: Trip) => Trip): Trip[] {
   return trips.map((t) => (t.id === tripId ? fn(t) : t))
+}
+
+/** Like `mapTrip`, but also bumps the cloud LWW stamp on the edited trip. */
+function editTrip(trips: Trip[], tripId: string, fn: (t: Trip) => Trip): Trip[] {
+  return trips.map((t) => (t.id === tripId ? touch(fn(t)) : t))
 }
 
 function mapDays(trip: Trip, dayId: string, fn: (d: Day) => Day): Trip {
@@ -181,7 +217,7 @@ export const useStore = create<State>()(
         const phone = normalizePhone(rawPhone)
         const member = get().members.find((m) => m.phone === phone)
         if (member) {
-          set({ currentUserId: member.id })
+          set((s) => ({ currentUserId: member.id, trips: withSelfInSeedTrips(s.trips, member.id) }))
           return { kind: 'known', member }
         }
         return { kind: 'unknown', phone }
@@ -189,7 +225,11 @@ export const useStore = create<State>()(
 
       registerMember: (m) => {
         const member: Member = { ...m, id: uid('m') }
-        set((s) => ({ members: [...s.members, member], currentUserId: member.id }))
+        set((s) => ({
+          members: [...s.members, member],
+          currentUserId: member.id,
+          trips: withSelfInSeedTrips(s.trips, member.id),
+        }))
         return member
       },
 
@@ -238,11 +278,11 @@ export const useStore = create<State>()(
         return trip
       },
 
-      updateTrip: (id, patch) => set((s) => ({ trips: mapTrip(s.trips, id, (t) => ({ ...t, ...patch })) })),
+      updateTrip: (id, patch) => set((s) => ({ trips: editTrip(s.trips, id, (t) => ({ ...t, ...patch })) })),
 
       updateTripDates: (id, startDate, endDate) =>
         set((s) => ({
-          trips: mapTrip(s.trips, id, (t) => ({
+          trips: editTrip(s.trips, id, (t) => ({
             ...t,
             startDate,
             endDate,
@@ -267,14 +307,14 @@ export const useStore = create<State>()(
       // ----- Trip membership -----
       addTripMember: (tripId, memberId) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             t.members.includes(memberId) ? t : { ...t, members: [...t.members, memberId] },
           ),
         })),
 
       removeTripMember: (tripId, memberId) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) => ({
+          trips: editTrip(s.trips, tripId, (t) => ({
             ...t,
             members: t.members.filter((id) => id !== memberId),
           })),
@@ -288,27 +328,27 @@ export const useStore = create<State>()(
         if (!trip) return { ok: false, reason: 'notfound' }
         if (trip.members.includes(me)) return { ok: false, reason: 'already' }
         set((st) => ({
-          trips: mapTrip(st.trips, trip.id, (t) => ({ ...t, members: [...t.members, me] })),
+          trips: editTrip(st.trips, trip.id, (t) => ({ ...t, members: [...t.members, me] })),
         }))
         return { ok: true, tripId: trip.id }
       },
 
       updateDayTitle: (tripId, dayId, title) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) => mapDays(t, dayId, (d) => ({ ...d, title }))),
+          trips: editTrip(s.trips, tripId, (t) => mapDays(t, dayId, (d) => ({ ...d, title }))),
         })),
 
       // ----- Day activities -----
       addActivity: (tripId, dayId, activity) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({ ...d, activities: [...d.activities, { ...activity, id: uid('a') }] })),
           ),
         })),
 
       updateActivity: (tripId, dayId, activityId, patch) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({
               ...d,
               activities: d.activities.map((a) => (a.id === activityId ? { ...a, ...patch } : a)),
@@ -318,21 +358,21 @@ export const useStore = create<State>()(
 
       deleteActivity: (tripId, dayId, activityId) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({ ...d, activities: d.activities.filter((a) => a.id !== activityId) })),
           ),
         })),
 
       reorderActivity: (tripId, dayId, fromIndex, toIndex) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({ ...d, activities: reorderActivities(d.activities, fromIndex, toIndex) })),
           ),
         })),
 
       moveActivity: (tripId, fromDayId, toDayId, activityId, toIndex) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) => ({
+          trips: editTrip(s.trips, tripId, (t) => ({
             ...t,
             days: moveActivityToDay(t.days, fromDayId, toDayId, activityId, toIndex),
           })),
@@ -340,7 +380,7 @@ export const useStore = create<State>()(
 
       addEntry: (tripId, dayId, entry) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({
               ...d,
               entries: [...d.entries, { ...entry, id: uid('e'), ts: Date.now(), reacts: {} }],
@@ -350,7 +390,7 @@ export const useStore = create<State>()(
 
       deleteEntry: (tripId, dayId, entryId) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({ ...d, entries: d.entries.filter((e) => e.id !== entryId) })),
           ),
         })),
@@ -358,7 +398,7 @@ export const useStore = create<State>()(
       addPhoto: (tripId, dayId, photo, uploaderRole) => {
         const status = uploadStatusFor(uploaderRole)
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({
               ...d,
               photos: [...d.photos, { ...photo, id: uid('p'), status, fav: false, reacts: {} }],
@@ -370,7 +410,7 @@ export const useStore = create<State>()(
 
       approvePhoto: (tripId, dayId, photoId) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({
               ...d,
               photos: d.photos.map((p) => (p.id === photoId ? { ...p, status: 'approved' } : p)),
@@ -380,14 +420,14 @@ export const useStore = create<State>()(
 
       rejectPhoto: (tripId, dayId, photoId) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({ ...d, photos: d.photos.filter((p) => p.id !== photoId) })),
           ),
         })),
 
       toggleFav: (tripId, dayId, photoId) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({
               ...d,
               photos: d.photos.map((p) =>
@@ -399,7 +439,7 @@ export const useStore = create<State>()(
 
       reactEntry: (tripId, dayId, entryId, emoji, memberId) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({
               ...d,
               entries: d.entries.map((e) =>
@@ -411,7 +451,7 @@ export const useStore = create<State>()(
 
       reactPhoto: (tripId, dayId, photoId, emoji, memberId) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({
               ...d,
               photos: d.photos.map((p) =>
@@ -426,7 +466,7 @@ export const useStore = create<State>()(
       // ----- Equipment checklist -----
       toggleChecklistItem: (tripId, groupId, itemId) =>
         set((s) => ({
-          trips: mapTrip(s.trips, tripId, (t) =>
+          trips: editTrip(s.trips, tripId, (t) =>
             mapGroup(t, groupId, (g) => ({
               ...g,
               items: g.items.map((it) => (it.id === itemId ? { ...it, done: !it.done } : it)),
@@ -437,10 +477,12 @@ export const useStore = create<State>()(
       addChecklistItem: (tripId, groupId, item) =>
         set((s) => {
           const me = s.members.find((m) => m.id === s.currentUserId)
-          if (!me || !canEditChecklist(me.role)) return {} // parent-only guard
+          // Adding an item is open to EVERY member — adults and children alike
+          // (Galli feedback #16). Only structural edits below stay parent-only.
+          if (!me || !canAddChecklistItem(me.role)) return {}
           const newItem: ChecklistItem = { id: uid('ci'), label: item.label, owner: item.owner, done: false }
           return {
-            trips: mapTrip(s.trips, tripId, (t) => mapGroup(t, groupId, (g) => ({ ...g, items: [...g.items, newItem] }))),
+            trips: editTrip(s.trips, tripId, (t) => mapGroup(t, groupId, (g) => ({ ...g, items: [...g.items, newItem] }))),
           }
         }),
 
@@ -449,7 +491,7 @@ export const useStore = create<State>()(
           const me = s.members.find((m) => m.id === s.currentUserId)
           if (!me || !canEditChecklist(me.role)) return {} // parent-only guard
           return {
-            trips: mapTrip(s.trips, tripId, (t) =>
+            trips: editTrip(s.trips, tripId, (t) =>
               mapGroup(t, groupId, (g) => ({ ...g, items: g.items.filter((it) => it.id !== itemId) })),
             ),
           }
@@ -461,7 +503,7 @@ export const useStore = create<State>()(
           if (!me || !canEditChecklist(me.role)) return {} // parent-only guard
           const newGroup: ChecklistGroup = { id: uid('cg'), name: group.name, emoji: group.emoji, items: [] }
           return {
-            trips: mapTrip(s.trips, tripId, (t) => ({ ...t, checklist: [...(t.checklist ?? []), newGroup] })),
+            trips: editTrip(s.trips, tripId, (t) => ({ ...t, checklist: [...(t.checklist ?? []), newGroup] })),
           }
         }),
 
@@ -470,7 +512,7 @@ export const useStore = create<State>()(
           const me = s.members.find((m) => m.id === s.currentUserId)
           if (!me || !canEditChecklist(me.role)) return {} // parent-only guard
           return {
-            trips: mapTrip(s.trips, tripId, (t) => ({
+            trips: editTrip(s.trips, tripId, (t) => ({
               ...t,
               checklist: (t.checklist ?? []).filter((g) => g.id !== groupId),
             })),

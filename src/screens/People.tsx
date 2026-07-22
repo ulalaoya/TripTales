@@ -8,6 +8,7 @@ import type { Member } from '../types'
 import { Icon } from '../components/Icon'
 import { Avatar } from '../components/Avatar'
 import { ParticipantRow, type ParticipantDraft } from '../components/ParticipantRow'
+import { TripHeader } from '../components/TripHeader'
 
 export function People() {
   const t = useT()
@@ -55,10 +56,7 @@ export function People() {
   return (
     <div className="paper min-h-full">
       <div className="max-w-column mx-auto px-5 py-5">
-        <h1 className="font-display text-2xl mb-1">{t('tripMembersTitle')}</h1>
-        <p className="text-sm text-[var(--muted)] mb-4">
-          <bdi>{trip.name}</bdi>
-        </p>
+        <TripHeader trip={trip} subtitle={t('settingsTitle')} />
 
         {/* Join code panel */}
         <div className="check-head mb-2">
@@ -79,9 +77,8 @@ export function People() {
             </button>
           </div>
         </div>
-        <p className="text-xs text-[var(--muted)] mb-4">{t('pickAvatarHint')}</p>
 
-        <ul className="space-y-2">
+        <ul className="space-y-2 mt-4">
           {tripMembers.map((m) => {
             const isSelf = m.id === me.id
 

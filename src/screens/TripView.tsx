@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useNavigate, useParams, Navigate } from 'react-router-dom'
+import { useParams, Navigate } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
@@ -22,13 +22,15 @@ import { useT } from '../i18n/useT'
 import { locationHref, locationLabel } from '../lib/locationLink'
 import { canPlanTrip, isTripMember } from '../lib/tripPermissions'
 import { daysLostWithContent } from '../lib/days'
-import { dayTabLabel } from '../lib/dayFormat'
+import { coverPhotoOf } from '../lib/tripCover'
+import { dayTabLabel, weekdayWord, dayMonth } from '../lib/dayFormat'
 import { sortActivitiesByTime } from '../lib/sortActivities'
-import type { Trip, Day, Activity, ActivityAttachment, Member, Photo } from '../types'
+import type { Trip, Day, Activity, ActivityAttachment, Member, Photo, Transport } from '../types'
 import { Icon } from '../components/Icon'
 import { LocationField } from '../components/LocationField'
 import { AttachmentField } from '../components/AttachmentField'
 import { PhotoTile } from '../components/PhotoTile'
+import { TripHeader } from '../components/TripHeader'
 
 const ACTIVITY_ICONS = ['🍽️', '🏖️', '🏔️', '🎡', '🚗', '✈️', '⛵', '🏨', '🛍️', '☕', '🎫', '📸']
 
@@ -37,7 +39,6 @@ const prefersReducedMotion = () =>
 
 export function TripView() {
   const t = useT()
-  const navigate = useNavigate()
   const { tripId } = useParams()
   const member = useCurrentMember()!
   const members = useStore((s) => s.members)
@@ -49,6 +50,7 @@ export function TripView() {
   const reorderActivity = useStore((s) => s.reorderActivity)
   const moveActivity = useStore((s) => s.moveActivity)
   const updateTripDates = useStore((s) => s.updateTripDates)
+  const updateTrip = useStore((s) => s.updateTrip)
   const updateDayTitle = useStore((s) => s.updateDayTitle)
   const addPhoto = useStore((s) => s.addPhoto)
   const showToast = useStore((s) => s.showToast)
@@ -101,45 +103,30 @@ export function TripView() {
   return (
     <div className="paper min-h-full">
       <div className="max-w-column mx-auto px-5 py-5">
-        {/* Header */}
-        <button
-          type="button"
-          onClick={() => navigate('/trips')}
-          className="tap inline-flex items-center gap-1 text-[var(--ink)] mb-4"
-        >
-          <Icon name="chevron" size={18} className="dir-back" />
-          {t('back')}
-        </button>
-
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <Icon
-              name={trip.transport === 'flight' ? 'plane' : 'car'}
-              size={26}
-              directional
-              className="text-[var(--coral)] shrink-0"
-            />
-            <h1 className="font-hand text-2xl truncate">{trip.name}</h1>
-          </div>
-          {canPlan && (
-            <button
-              type="button"
-              onClick={() => setSettingsOpen((v) => !v)}
-              aria-label={t('tripSettings')}
-              aria-expanded={settingsOpen}
-              className="tap p-2 text-[var(--ink)] shrink-0"
-            >
-              <Icon name="edit" size={20} />
-            </button>
-          )}
-        </div>
+        <TripHeader
+          trip={trip}
+          action={
+            canPlan ? (
+              <button
+                type="button"
+                onClick={() => setSettingsOpen((v) => !v)}
+                aria-label={t('tripSettings')}
+                aria-expanded={settingsOpen}
+                className="tap p-2 text-[var(--ink)] shrink-0"
+              >
+                <Icon name="edit" size={20} />
+              </button>
+            ) : undefined
+          }
+        />
 
         {settingsOpen && canPlan && (
-          <DateSettings
+          <TripSettings
             trip={trip}
             t={t}
             onClose={() => setSettingsOpen(false)}
-            onSave={(s, e) => {
+            onSaveInfo={(patch) => updateTrip(trip.id, patch)}
+            onSaveDates={(s, e) => {
               updateTripDates(trip.id, s, e)
               setSettingsOpen(false)
               setDayIdx(0)
@@ -155,9 +142,12 @@ export function TripView() {
             ))}
           </div>
 
-          {/* Selected day — the NAME is the heading, editable by planners */}
+          {/* Selected day — the NAME is the heading, editable by planners.
+              Keyed by day.id so its inline-edit draft state resets per day and
+              never bleeds across day tabs (Galli feedback #12). */}
           <div className="flex items-start justify-between gap-2 mb-2">
             <DayTitle
+              key={day.id}
               title={day.title}
               canPlan={canPlan}
               t={t}
@@ -252,9 +242,10 @@ function DayTab({
       role="tab"
       aria-selected={active}
       onClick={onSelect}
-      className={`tab tap ${active ? 'active' : ''} ${isOver ? 'ring-2 ring-[var(--coral)]' : ''}`}
+      className={`tab tab-day tap ${active ? 'active' : ''} ${isOver ? 'ring-2 ring-[var(--coral)]' : ''}`}
     >
-      <bdi>{dayTabLabel(day.date)}</bdi>
+      <bdi className="tab-day-word">{weekdayWord(day.date)}</bdi>
+      <bdi className="tab-day-date">{dayMonth(day.date)}</bdi>
     </button>
   )
 }
@@ -401,7 +392,20 @@ function ActivityCard({
   }
 
   return (
-    <li ref={setNodeRef} style={style} className="trip-card p-3 flex items-start gap-2">
+    <li ref={setNodeRef} style={style} className="trip-card p-3 relative flex items-start gap-2">
+      {/* Delete moved to the TOP-LEFT corner (Galli feedback #9) so it is never
+          tapped by accident. Still a ≥44px tap target, visually a small chip. */}
+      {canPlan && (
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={t('delete')}
+          className="tap absolute top-1.5 p-1.5 text-[var(--danger)] z-10"
+          style={{ insetInlineEnd: 6 }}
+        >
+          <Icon name="trash" size={16} />
+        </button>
+      )}
       {canPlan && (
         <button
           type="button"
@@ -413,16 +417,17 @@ function ActivityCard({
           <Icon name="chevron" size={16} style={{ transform: 'rotate(90deg)' }} />
         </button>
       )}
-      <span className="text-2xl leading-none mt-0.5" aria-hidden>
-        {activity.icon || '📍'}
-      </span>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 pe-7">
+        {/* RTL reading order right→left: TIME (big/bold) → icon → name (#11). */}
         <div className="flex items-center gap-2">
           {activity.time && (
-            <span className="chip-time text-[11px] px-2 py-0.5">
+            <span className="text-lg font-extrabold text-[var(--coral)] shrink-0 leading-none">
               <bdi>{activity.time}</bdi>
             </span>
           )}
+          <span className="text-2xl leading-none shrink-0" aria-hidden>
+            {activity.icon || '📍'}
+          </span>
           <h4 className="font-hand text-lg truncate">{activity.title}</h4>
         </div>
         {activity.loc && (
@@ -499,9 +504,6 @@ function ActivityCard({
               className="tap p-1.5 text-[var(--ink)]"
             >
               <Icon name="edit" size={16} />
-            </button>
-            <button type="button" onClick={onDelete} aria-label={t('delete')} className="tap p-1.5 text-[var(--danger)]">
-              <Icon name="trash" size={16} />
             </button>
             {otherDays.length > 0 && (
               <select
@@ -601,14 +603,20 @@ function ActivityForm({
           </button>
         ))}
       </div>
-      <input
-        type="time"
-        dir="ltr"
-        value={time}
-        onChange={(e) => setTime(e.target.value)}
-        aria-label={t('activityTime')}
-        className="tap w-full rounded-[14px] px-3 py-2 bg-white border border-[var(--line)] outline-none text-sm"
-      />
+      <div>
+        <label htmlFor="act-time" className="block text-xs font-semibold mb-1">
+          {t('activityTimeLabel')}
+        </label>
+        <input
+          id="act-time"
+          type="time"
+          dir="ltr"
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+          aria-label={t('activityTimeLabel')}
+          className="tap w-full rounded-[14px] px-3 py-2 bg-white border border-[var(--line)] outline-none text-sm"
+        />
+      </div>
 
       <LocationField value={loc} onChange={setLoc} />
 
@@ -640,40 +648,137 @@ function ActivityForm({
   )
 }
 
-function DateSettings({
+function TripSettings({
   trip,
   t,
   onClose,
-  onSave,
+  onSaveInfo,
+  onSaveDates,
 }: {
   trip: Trip
   t: ReturnType<typeof useT>
   onClose: () => void
-  onSave: (start: string, end: string) => void
+  onSaveInfo: (patch: Partial<Trip>) => void
+  onSaveDates: (start: string, end: string) => void
 }) {
+  const [name, setName] = useState(trip.name)
   const [start, setStart] = useState(trip.startDate)
   const [end, setEnd] = useState(trip.endDate)
   const [confirm, setConfirm] = useState<number | null>(null)
 
-  function attempt(e: React.FormEvent) {
+  // Every approved photo across the trip's album — the cover candidates (#20).
+  const approved: Photo[] = []
+  for (const d of trip.days) for (const p of d.photos) if (p.status === 'approved') approved.push(p)
+  const current = coverPhotoOf(trip)
+
+  function commitName() {
+    const next = name.trim()
+    if (next && next !== trip.name) onSaveInfo({ name: next })
+  }
+
+  function attemptDates(e: React.FormEvent) {
     e.preventDefault()
     const lost = daysLostWithContent(start, end, trip.days)
     if (lost.length > 0) {
       setConfirm(lost.length)
       return
     }
-    onSave(start, end)
+    onSaveDates(start, end)
   }
 
   return (
-    <div className="journal-lined p-4 mb-4 space-y-3">
+    <div className="journal-lined p-4 mb-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-base">{t('editDates')}</h3>
+        <h3 className="font-display text-base">{t('editTripTitle')}</h3>
         <button type="button" onClick={onClose} aria-label={t('cancel')} className="tap p-1 text-[var(--muted)]">
           <Icon name="close" size={18} />
         </button>
       </div>
-      <form onSubmit={attempt} className="space-y-3">
+
+      {/* Trip NAME (Galli feedback #15) */}
+      <div>
+        <label htmlFor="ts-name" className="block text-xs font-medium mb-1">{t('tripName')}</label>
+        <input
+          id="ts-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={commitName}
+          className="tap w-full rounded-[14px] px-3 py-2.5 bg-white border border-[var(--line)] outline-none font-hand text-lg"
+        />
+      </div>
+
+      {/* Trip ICON — transport (Galli feedback #15) */}
+      <div>
+        <span className="block text-xs font-medium mb-1">{t('tripIconLabel')}</span>
+        <div
+          className="inline-flex rounded-[14px] overflow-hidden border border-[var(--line)] bg-white"
+          role="radiogroup"
+          aria-label={t('tripIconLabel')}
+        >
+          {(['flight', 'drive'] as Transport[]).map((tr) => (
+            <button
+              key={tr}
+              type="button"
+              role="radio"
+              aria-checked={trip.transport === tr}
+              onClick={() => onSaveInfo({ transport: tr })}
+              className={`tap inline-flex items-center gap-1 px-4 py-2 text-sm font-medium ${
+                trip.transport === tr ? 'bg-[var(--ink)] text-white' : 'text-[var(--ink)]'
+              }`}
+            >
+              <Icon name={tr === 'flight' ? 'plane' : 'car'} size={18} directional />
+              {tr === 'flight' ? t('flight') : t('drive')}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Cover photo picker (Galli feedback #20) */}
+      <div>
+        <span className="block text-xs font-medium mb-1">{t('coverPhotoLabel')}</span>
+        {approved.length === 0 ? (
+          <p className="text-sm text-[var(--muted)]">{t('noApprovedPhotos')}</p>
+        ) : (
+          <div className="grid grid-cols-4 gap-2">
+            <button
+              type="button"
+              onClick={() => onSaveInfo({ coverPhotoId: undefined })}
+              aria-pressed={!trip.coverPhotoId}
+              className={`tap rounded-[12px] border p-1 text-[10px] leading-tight text-center ${
+                !trip.coverPhotoId ? 'border-[var(--coral)] ring-2 ring-[var(--coral)]' : 'border-[var(--line)]'
+              }`}
+              style={{ minHeight: 56 }}
+            >
+              {t('coverFirstPhoto')}
+            </button>
+            {approved.map((p) => {
+              const chosen = current?.id === p.id
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => onSaveInfo({ coverPhotoId: p.id })}
+                  aria-pressed={chosen}
+                  aria-label={p.caption || t('coverPhotoLabel')}
+                  className={`tap rounded-[12px] overflow-hidden border ${
+                    chosen ? 'border-[var(--coral)] ring-2 ring-[var(--coral)]' : 'border-[var(--line)]'
+                  }`}
+                >
+                  {p.svg ? (
+                    <span className="block" dangerouslySetInnerHTML={{ __html: p.svg }} />
+                  ) : (
+                    <img src={p.src} alt={p.caption} style={{ display: 'block', width: '100%', height: 56, objectFit: 'cover' }} />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Dates — extend to add days, shrink to remove (Galli feedback #8) */}
+      <form onSubmit={attemptDates} className="space-y-3">
+        <span className="block text-xs font-medium">{t('editDates')}</span>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium mb-1">{t('startDate')}</label>
@@ -704,7 +809,7 @@ function DateSettings({
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => onSave(start, end)}
+                onClick={() => onSaveDates(start, end)}
                 className="tap px-4 py-2 rounded-[14px] bg-[var(--danger)] text-white text-sm font-semibold"
               >
                 {t('confirm')}

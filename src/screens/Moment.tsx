@@ -9,6 +9,7 @@ import { compressDataUrl } from '../lib/compressImage'
 import type { Member } from '../types'
 import { Icon } from '../components/Icon'
 import { Avatar } from '../components/Avatar'
+import { TripHeader } from '../components/TripHeader'
 
 const MOODS = ['🤩', '😍', '😂', '😋', '😴', '😱']
 
@@ -86,10 +87,7 @@ export function Moment() {
   return (
     <div className="paper min-h-full">
       <div className="max-w-column mx-auto px-5 py-5">
-        <h1 className="font-display text-2xl mb-1">{t('momentTitle')}</h1>
-        <p className="text-sm text-[var(--muted)] mb-4">
-          <bdi>{trip.name}</bdi>
-        </p>
+        <TripHeader trip={trip} subtitle={t('momentTitle')} />
 
         <form onSubmit={save} className="composer space-y-3">
           {/* Dropzone */}

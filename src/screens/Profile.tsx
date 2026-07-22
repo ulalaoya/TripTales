@@ -8,6 +8,7 @@ import { AvatarPicker } from '../components/AvatarPicker'
 import { Avatar } from '../components/Avatar'
 import { Icon } from '../components/Icon'
 import { LangToggle } from '../components/LangToggle'
+import { BrandMark } from '../components/Logo'
 
 export function Profile() {
   const t = useT()
@@ -40,7 +41,10 @@ export function Profile() {
             <Icon name="chevron" size={18} className="dir-back" />
             {t('back')}
           </button>
-          <LangToggle />
+          <div className="flex items-center gap-2">
+            <LangToggle />
+            <BrandMark size={28} />
+          </div>
         </header>
 
         <div className="flex items-center gap-3 mb-5">
