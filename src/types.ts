@@ -25,6 +25,12 @@ export interface Member {
   figure: Figure
   color: string
   email?: string
+  /**
+   * Cloud only: the Firebase Anonymous Auth uid that last claimed this member.
+   * The PHONE stays the human identifier; this uid is the security principal
+   * used by the Firestore rules. Absent in pure local mode.
+   */
+  uid?: string
 }
 
 export interface Photo {
@@ -40,6 +46,8 @@ export interface Photo {
   mood?: string
   /** Optional list of member ids tagged as "who was there". */
   people?: string[]
+  /** Cloud only: last-write-wins stamp (ms). Absent in pure local mode. */
+  updatedAt?: number
 }
 
 export interface Entry {
@@ -136,4 +144,11 @@ export interface Trip {
   idea?: boolean
   /** Equipment / packing checklist groups. */
   checklist?: ChecklistGroup[]
+  /**
+   * Cloud only: the anonymous auth uids allowed to read/write this trip.
+   * Firestore rules key off this array. Absent in pure local mode.
+   */
+  memberUids?: string[]
+  /** Cloud only: last-write-wins stamp (ms). Absent in pure local mode. */
+  updatedAt?: number
 }

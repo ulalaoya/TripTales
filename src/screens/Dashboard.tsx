@@ -13,6 +13,9 @@ import { Icon } from '../components/Icon'
 import { Logo } from '../components/Logo'
 import { LangToggle } from '../components/LangToggle'
 import { Avatar } from '../components/Avatar'
+import { SyncBadge } from '../components/SyncBadge'
+import { isCloudEnabled } from '../lib/firebase'
+import { cloudJoinByCode } from '../lib/cloud'
 
 type Tab = 'all' | 'planned' | 'ended' | 'idea'
 
@@ -78,22 +81,54 @@ export function Dashboard() {
     showToast(t('copied'))
   }
 
-  function submitJoin(e: React.FormEvent) {
+  function joined(tripId: string) {
+    showToast(t('joinedTrip'))
+    setJoinOpen(false)
+    setCode('')
+    navigate(`/trips/${tripId}`)
+  }
+
+  async function submitJoin(e: React.FormEvent) {
     e.preventDefault()
     setJoinErr('')
     if (!isValidJoinCodeFormat(code)) {
       setJoinErr(t('joinInvalidFormat'))
       return
     }
+    // Cloud mode: ALWAYS resolve the code against the cloud first. A fresh
+    // install seeds `t-drive`/`SUNSET` locally, so the local `joinTripByCode`
+    // would happily "join" that seed copy and short-circuit before the real
+    // cloud arrayUnion ever runs — leaving the joiner on their own copy instead
+    // of the sharer's trip. Going cloud-first guarantees my uid lands in the
+    // cloud trip's `memberUids` even when a same-id local trip already exists.
+    if (isCloudEnabled) {
+      const remote = await cloudJoinByCode(code)
+      if (remote.ok) {
+        joined(remote.tripId)
+        return
+      }
+      if (remote.reason === 'already') {
+        // Already a member of the cloud trip — friendly, not an error.
+        showToast(t('joinAlready'))
+        setJoinOpen(false)
+        setCode('')
+        navigate(`/trips/${remote.tripId}`)
+        return
+      }
+      if (remote.reason === 'notfound') {
+        setJoinErr(t('joinNotFound'))
+        return
+      }
+      // remote.reason === 'offline' → cloud unusable; fall through to the
+      // local-only path, which also covers trips this device already holds.
+    }
+    // Local-only path (and cloud-offline fallback) — unchanged behaviour.
     const res = joinTripByCode(code)
     if (res.ok) {
-      showToast(t('joinedTrip'))
-      setJoinOpen(false)
-      setCode('')
-      navigate(`/trips/${res.tripId}`)
-    } else {
-      setJoinErr(res.reason === 'already' ? t('joinAlready') : t('joinNotFound'))
+      joined(res.tripId)
+      return
     }
+    setJoinErr(res.reason === 'already' ? t('joinAlready') : t('joinNotFound'))
   }
 
   return (
@@ -102,6 +137,7 @@ export function Dashboard() {
         <header className="flex justify-between items-center mb-5">
           <Logo variant="emboss" size="sm" />
           <div className="flex items-center gap-2">
+            <SyncBadge />
             <LangToggle />
             <button
               type="button"

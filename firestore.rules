@@ -1,0 +1,205 @@
+rules_version = '2';
+
+// ===========================================================================
+// TripTales — Firestore security rules
+//
+// SECURITY MODEL, STATED PLAINLY
+// ------------------------------
+// TripTales signs users in with Firebase ANONYMOUS auth. The phone number the
+// user types is a human label only — it is NEVER verified by SMS. That is a
+// deliberate, approved product decision.
+//
+// The consequence, accepted knowingly:
+//
+//   *** ANYONE WHO LEARNS A TRIP'S 6-CHARACTER JOIN CODE CAN JOIN THAT TRIP ***
+//   *** AND WILL THEN SEE AND BE ABLE TO EDIT ALL OF ITS CONTENT AND PHOTOS ***
+//
+// There is no second factor. Treat a join code like a house key: share it in a
+// family chat, not in public. Equally, because phone numbers are unverified, a
+// `members` document can be re-claimed by a later anonymous uid that types the
+// same phone number — again by design, so a family member who reinstalls the
+// app or switches phone gets their identity back without an SMS round-trip.
+//
+// Everything else is locked down: no unauthenticated access at all, and trip
+// content is readable only by uids listed in that trip's `memberUids`.
+//
+// ANONYMOUS AUTH IS OPEN TO THE WORLD
+// -----------------------------------
+// Anyone can call signInAnonymously() against this project, and the web config
+// needed to do so ships in a public bundle. So "signed in" means "anybody at
+// all", and every `if isSignedIn()` below must be read as `if true`. Two
+// consequences are designed around explicitly:
+//
+//   • `list` is DENIED on /joinCodes. `read` covers both `get` and `list`, and
+//     a listable /joinCodes would let anyone dump every code in the database
+//     and walk into every trip. Codes are resolvable only by exact document id
+//     — you must already KNOW the code, which is precisely the documented
+//     model. The client only ever does doc(db,'joinCodes',CODE).
+//
+//   • /members NEVER contains a plaintext phone number or email address. It
+//     carries `phoneHash` (see src/lib/phoneHash.ts) so a device can find its
+//     own member document without uploading the number. That hash OBSCURES
+//     rather than PROTECTS: Israeli mobile numbers span only ~10^8 values, so
+//     a dumped collection can be brute-forced offline. What it does guarantee
+//     is that plaintext numbers are never uploaded, logged, backed up or
+//     visible in a network trace, and that dumping /members yields opaque hex
+//     instead of a ready-made contact list. Email is never uploaded at all.
+//
+// HOW TO INSTALL
+// --------------
+// Firebase console → Firestore Database → Rules → paste this file → Publish.
+// (Or `firebase deploy --only firestore:rules` with the Firebase CLI.)
+// ===========================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function me() {
+      return request.auth.uid;
+    }
+
+    // The membership list of a trip, read from the parent trip document.
+    function tripMemberUids(tripId) {
+      return get(/databases/$(database)/documents/trips/$(tripId)).data.memberUids;
+    }
+
+    function isTripMember(tripId) {
+      return isSignedIn() && me() in tripMemberUids(tripId);
+    }
+
+    // -----------------------------------------------------------------------
+    // members/{memberId}
+    //   { phoneHash, name, role, figure, color, uid }
+    //
+    // NO `phone`. NO `email`. Those live only in the owning device's
+    // localStorage — see the privacy note in the header.
+    //
+    // `uid` is the anonymous uid that last claimed this member. `list` IS
+    // allowed here (unlike /joinCodes) because a device must query
+    // `where('phoneHash','==',…)` to find its own member document on a new
+    // phone. The cost of that is bounded: the collection exposes display names,
+    // avatar figures/colours and opaque hashes — no contact details.
+    // -----------------------------------------------------------------------
+    match /members/{memberId} {
+      allow get, list: if isSignedIn();
+
+      // RE-CLAIMABLE BY DESIGN (the no-SMS model, stated at the top of this
+      // file). A member document may be created or (re-)written by ANY signed-in
+      // user, but ONLY by stamping THEIR OWN uid on it — you can never point a
+      // member row at someone else's uid. This is exactly what lets a family
+      // member who reinstalls the app or switches phone get a fresh anonymous
+      // uid and re-claim their identity by typing the same phone number, with
+      // no SMS round-trip.
+      //
+      // The blast radius is deliberately small: claiming a member row grants NO
+      // trip access — that is governed solely by each trip's `memberUids` — so
+      // the worst a stranger can do is scribble on a display name/avatar, never
+      // reach trip content. Tightening this is the SMS-verification upgrade path.
+      allow create: if isSignedIn() && request.resource.data.uid == me();
+      allow update: if isSignedIn() && request.resource.data.uid == me();
+
+      allow delete: if isSignedIn()
+                    && 'uid' in resource.data
+                    && resource.data.uid == me();
+    }
+
+    // -----------------------------------------------------------------------
+    // trips/{tripId}
+    //   { name, startDate, endDate, transport, idea?, order, joinCode,
+    //     members: string[], memberUids: string[], checklist, days[], updatedAt }
+    //
+    // Photos are NOT in this document — they live in the photos subcollection.
+    // -----------------------------------------------------------------------
+    match /trips/{tripId} {
+
+      function amMember() {
+        return isSignedIn() && me() in resource.data.memberUids;
+      }
+
+      // THE JOIN EXCEPTION.
+      //
+      // A code-holder is by definition NOT yet in `memberUids`, so `amMember()`
+      // is false and they could never add themselves. This allows exactly one
+      // shape of update from a non-member: appending THEIR OWN uid (and their
+      // member id) and changing nothing else.
+      //
+      //   1. `memberUids` must still contain everything it contained before —
+      //      no evicting other people.
+      //   2. `memberUids` minus MY uid must equal what it was before — so the
+      //      only uid added is mine, and no other uid can be smuggled in.
+      //   3. `members` may only grow, and by at most one entry (my member id).
+      //   4. No other field may be touched at all — `updatedAt` is tolerated
+      //      because a client may restamp it, everything else is frozen.
+      function isSelfJoin() {
+        let before = resource.data;
+        let after  = request.resource.data;
+        return isSignedIn()
+               && !(me() in before.memberUids)
+               && (me() in after.memberUids)
+               && after.memberUids.hasAll(before.memberUids)
+               && after.memberUids.removeAll([me()]).hasOnly(before.memberUids)
+               && before.memberUids.hasOnly(after.memberUids.removeAll([me()]))
+               && after.members.hasAll(before.members)
+               && after.members.size() <= before.members.size() + 1
+               && after.diff(before).affectedKeys()
+                       .hasOnly(['memberUids', 'members', 'updatedAt']);
+      }
+
+      allow read:   if amMember();
+      allow delete: if amMember();
+
+      // The creator must put themselves in `memberUids`, or nobody could ever
+      // read the trip back (and nobody could be locked out of their own trip).
+      allow create: if isSignedIn() && me() in request.resource.data.memberUids;
+
+      // A normal edit by a member, or the join exception above.
+      allow update: if amMember() || isSelfJoin();
+
+      // ---------------------------------------------------------------------
+      // trips/{tripId}/photos/{photoId}
+      //   { dayId, src, caption, fav, by, status, reacts, mood?, people?,
+      //     updatedAt }
+      //
+      // One document per photo, so a ~250 KB base64 image never threatens the
+      // 1 MiB per-document ceiling that an inlined array would blow instantly.
+      // ---------------------------------------------------------------------
+      match /photos/{photoId} {
+        allow read, write: if isTripMember(tripId);
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // joinCodes/{CODE}  →  { tripId }
+    //
+    // The document id IS the normalised (uppercased) join code.
+    //
+    // `get` is allowed to any signed-in user — that is what makes "type the
+    // code a cousin sent you" work, and it is the mechanism the warning at the
+    // top of this file is about.
+    //
+    // `list` IS DENIED, and that distinction is the whole security of the join
+    // model. `allow read` would grant BOTH verbs, and a listable collection
+    // turns "anyone who learns a code can join that trip" into "anyone can
+    // harvest every code and join every trip". A code must be known to be used.
+    //
+    // Writable only by someone already in the referenced trip.
+    // -----------------------------------------------------------------------
+    match /joinCodes/{code} {
+      allow get:  if isSignedIn();
+      allow list: if false;
+      allow create, update: if isSignedIn()
+                            && isTripMember(request.resource.data.tripId);
+      allow delete: if isSignedIn()
+                    && isTripMember(resource.data.tripId);
+    }
+
+    // Deny everything not matched above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

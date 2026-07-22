@@ -25,6 +25,8 @@ export type IconName =
   | 'bell'
   | 'map'
   | 'checkSquare'
+  | 'cloud'
+  | 'cloudOff'
 
 const PATHS: Record<IconName, string> = {
   mapPin: '<path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/>',
@@ -52,6 +54,9 @@ const PATHS: Record<IconName, string> = {
   bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>',
   map: '<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>',
   checkSquare: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8 12 2.5 2.5L16.5 8"/>',
+  cloud: '<path d="M7 18a4 4 0 0 1-.4-7.98A5.5 5.5 0 0 1 17.3 9.2 3.9 3.9 0 0 1 17 18z"/>',
+  cloudOff:
+    '<path d="M7 18a4 4 0 0 1-.4-7.98a5.5 5.5 0 0 1 2-3.06M11.3 6.1A5.5 5.5 0 0 1 17.3 9.2 3.9 3.9 0 0 1 18.4 16.6"/><path d="M3 3l18 18"/>',
 }
 
 interface Props {

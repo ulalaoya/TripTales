@@ -12,7 +12,7 @@ npm run dev      # http://localhost:5173
 פקודות נוספות:
 
 ```bash
-npm run test     # Vitest — 91 בדיקות יחידה
+npm run test     # Vitest — 159 בדיקות יחידה
 npm run build    # בנייה לפרודקשן (tsc --noEmit && vite build)
 npm run preview  # תצוגה מקדימה של הבנייה
 ```
@@ -34,9 +34,70 @@ npm run preview  # תצוגה מקדימה של הבנייה
 
 **רשימת ציוד:** קבוצות עם אימוג'י, אחראי לכל פריט, וטבעת התקדמות שמזינה את אחוז "התכנון הושלם" במסך הבית. כולם יכולים לסמן פריטים; רק מבוגרים מוסיפים ומוחקים.
 
+## סנכרון בין מכשירים (Firebase — אופציונלי)
+
+**ברירת המחדל היא מצב מקומי בלבד.** בלי הגדרות Firebase האפליקציה עובדת בדיוק כמו קודם:
+Zustand + localStorage, בלי רשת, ובלי שה-SDK של Firebase יורד בכלל לדפדפן
+(בבנייה מקומית הוא נעלם לגמרי מה-bundle).
+
+הסנכרון נדלק רק כאשר גם `VITE_FIREBASE_API_KEY` וגם `VITE_FIREBASE_PROJECT_ID` מוגדרים.
+ראו `.env.example` לשישה המשתנים ולצ'קליסט ההקמה בקונסולה.
+
+```bash
+cp .env.example .env.local   # ואז מלאו את הערכים מהקונסולה
+```
+
+### הקמה בקונסולת Firebase
+
+1. **Authentication → Sign-in method → Anonymous** — להפעיל.
+   הכניסה הגלויה נשארת זהה (מקלידים טלפון ישראלי ונכנסים); הטלפון הוא המזהה האנושי,
+   וה-uid האנונימי הוא ה-principal שכללי האבטחה עובדים מולו. **אין SMS.**
+2. **Firestore Database** — ליצור (production mode).
+3. **Firestore → Rules** — להדביק את `firestore.rules` שבשורש המאגר וללחוץ Publish.
+4. **Authentication → Settings → Authorized domains** — להוסיף את דומיין ה-GitHub Pages.
+
+### הגדרות ה-web של Firebase הן פומביות — במתכוון
+
+ששת הערכים נכנסים ל-bundle שכל גולש מוריד. זה לא באג ולא דליפה: הם מזהים את הפרויקט
+ולא מעניקים גישה. **כל האבטחה נמצאת ב-`firestore.rules`.** ב-CI הם מוזרקים מ-`secrets`
+רק כדי לא לשמור אותם בקוד הפומבי; אם הם חסרים — הבנייה מצליחה ונפרסת גרסה מקומית בלבד.
+
+### מה מסונכרן
+
+| Firestore | תוכן |
+|---|---|
+| `members/{memberId}` | `{ phoneHash, name, role, figure, color, uid }` — **בלי טלפון ובלי אימייל** |
+| `trips/{tripId}` | הטיול **בלי** תמונות + `memberUids` + `updatedAt` |
+| `trips/{tripId}/photos/{photoId}` | תמונה בודדת למסמך — `{ dayId, src, caption, fav, by, status, reacts, mood?, people? }` |
+| `joinCodes/{CODE}` | `{ tripId }` — כך קוד הצטרפות עובד בין מכשירים |
+
+תמונות מוקטנות ל-1000px בצלע הארוכה ו-JPEG באיכות 0.6 לפני השמירה, כדי שכל תמונה
+תיכנס בנוחות מתחת למגבלת 1MB למסמך. טיול הדמו של סנטוריני (`t-flight`) לעולם לא מועלה.
+
+### פרטיות — מה **לא** עולה לענן
+
+כניסה אנונימית פתוחה לכל העולם וה-bundle פומבי, ולכן "משתמש מחובר" שקול ל"כל אחד".
+בהתאם:
+
+- **מספרי טלפון לעולם לא עולים לענן.** במסמך המשתתף נשמר רק `phoneHash`
+  (`src/lib/phoneHash.ts`) — מפתח חיפוש שמאפשר למכשיר חדש למצוא את המסמך שלו בלי
+  להעלות את המספר. ההאש **מטשטש ולא מגן**: מרחב המספרים הישראלי הוא ~10⁸ ולכן ניתן
+  לפרוץ אותו offline. מה שכן מובטח: מספר גולמי לא נשמר, לא מגובה ולא מופיע ב-network trace,
+  ו-dump של האוסף מחזיר hex אטום ולא רשימת אנשי קשר.
+- **אימייל לעולם לא עולה לענן** (שדה של מבוגרים בלבד; נשאר ב-localStorage).
+- **`joinCodes` אינו ניתן ל-list** (`allow list: if false`) — אפשר רק לפתוח קוד ספציפי
+  שכבר מכירים. בלי זה כל אחד היה יכול לשאוב את כל הקודים ולהצטרף לכל טיול.
+
+### הפשרה המודעת
+
+בלי אימות SMS, **כל מי שיודע את קוד ההצטרפות של טיול יכול להצטרף אליו** ולראות ולערוך
+את כל תוכנו. זו החלטה מוצרית מאושרת ומתועדת בראש `firestore.rules`. מחיקת טיול במכשיר
+אחד משמעה "יציאה מהטיול" ולא מחיקה למשפחה כולה.
+
 ## סטאק
 
-React 18 · Vite · TypeScript · Tailwind · Zustand (persist → localStorage) · React Router · Vitest.
+React 18 · Vite · TypeScript · Tailwind · Zustand (persist → localStorage) · React Router · Vitest ·
+Firebase (Anonymous Auth + Firestore, נטען דינמית ורק כשמוגדר).
 
 הלוגיקה הטהורה יושבת ב-`src/lib/` (טלפון, הרשאות, ריאקציות, הזמנות, מפות, צ'קליסט, סטטוס טיול) ומכוסה בבדיקות יחידה.
 
@@ -52,7 +113,8 @@ React 18 · Vite · TypeScript · Tailwind · Zustand (persist → localStorage)
 
 ## סטטוס
 
-בדיקות: 91/91 · תוכנית ובקרת איכות מלאה: `docs/TripTales_Plan_and_QA.md`.
+בדיקות: 159/159 · תוכנית ובקרת איכות מלאה: `docs/TripTales_Plan_and_QA.md`.
 
-**TODO לפרודקשן:** חיבור Firebase Auth Phone OTP אמיתי (כרגע מדומה ב-`src/lib/firebaseAuth.ts`),
-ו-deep link להזמנות `?join=<tripId>`.
+**TODO לפרודקשן:** deep link להזמנות `?join=<tripId>`.
+(אימות SMS ירד מהפרק במכוון — ראו "סנכרון בין מכשירים" למעלה. `src/lib/firebaseAuth.ts`
+נשאר כ-stub של זרימת ה-OTP למקרה שיוחלט אחרת.)

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom'
 import { useStore } from './store/useStore'
+import { cloudSignIn, cloudStop } from './lib/cloud'
 import { TripBottomNav } from './components/BottomNav'
 import { Toast } from './components/Toast'
 import { Welcome } from './screens/Welcome'
@@ -51,9 +52,22 @@ function TripLayout() {
   )
 }
 
+/**
+ * Connect / disconnect cloud sync as the session changes.
+ * Both calls are no-ops when Firebase is not configured, so a local-mode build
+ * behaves exactly as it did before sync existed.
+ */
+function useCloudSession(currentUserId: string | null) {
+  useEffect(() => {
+    if (currentUserId) void cloudSignIn()
+    else cloudStop()
+  }, [currentUserId])
+}
+
 export default function App() {
   useHtmlDir()
   const currentUserId = useStore((s) => s.currentUserId)
+  useCloudSession(currentUserId)
 
   // basename נגזר מ-base של Vite כדי שהראוטר יעבוד גם תחת /TripTales/ ב-GitHub Pages
   return (

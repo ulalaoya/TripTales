@@ -21,6 +21,9 @@ import { generateJoinCode } from '../lib/joinCode'
 import { canJoinWithCode } from '../lib/tripPermissions'
 import { reorderActivities, moveActivityToDay } from '../lib/activities'
 import { buildDays } from '../lib/days'
+import { pickNewer } from '../lib/mergeRemote'
+import { remapMemberId } from '../lib/memberIdentity'
+import type { SyncState } from '../lib/syncState'
 import type { Lang } from '../i18n'
 
 export type LoginResult =
@@ -31,12 +34,27 @@ export type JoinResult =
   | { ok: true; tripId: string }
   | { ok: false; reason: 'notfound' | 'already' }
 
+/**
+ * A member document as it comes back from Firestore.
+ *
+ * `phone` and `email` are structurally ABSENT — they are never uploaded (see
+ * `lib/phoneHash` and `claimMemberDoc`), so they can never arrive from the
+ * cloud and can never overwrite the local copies. The type enforces that.
+ */
+export type RemoteMember = { id: string } & Partial<Omit<Member, 'id' | 'phone' | 'email'>>
+
 interface State {
   lang: Lang
   members: Member[]
   trips: Trip[]
   currentUserId: string | null
   toast: string | null
+
+  // ----- Cloud sync (NEVER persisted; always inert in local mode) -----
+  /** Firebase Anonymous Auth uid, once signed in. `null` in local mode. */
+  cloudUid: string | null
+  /** Indicator state. Stays `'off'` for the whole session in local mode. */
+  syncState: SyncState
 
   setLang: (lang: Lang) => void
   showToast: (msg: string) => void
@@ -111,6 +129,20 @@ interface State {
   deleteChecklistItem: (tripId: string, groupId: string, itemId: string) => void
   addChecklistGroup: (tripId: string, group: { name: string; emoji: string }) => void
   deleteChecklistGroup: (tripId: string, groupId: string) => void
+
+  // ----- Cloud sync plumbing (only ever called by `lib/cloud.ts`) -----
+  setSyncState: (state: SyncState) => void
+  setCloudUid: (uid: string | null) => void
+  /** Stamp the local uid onto a member (the anonymous principal that claimed it). */
+  setMemberUid: (memberId: string, uid: string) => void
+  /** Adopt the cloud's member id for this phone across the whole local state. */
+  adoptMemberId: (fromId: string, toId: string) => void
+  /** Upsert member documents that arrived from Firestore (never phone/email). */
+  applyRemoteMembers: (incoming: RemoteMember[]) => void
+  /** Merge one trip that arrived from Firestore (last-write-wins on updatedAt). */
+  applyRemoteTrip: (trip: Trip) => void
+  /** Record the cloud bookkeeping fields after a successful push. */
+  markTripPushed: (tripId: string, updatedAt: number, memberUids: string[]) => void
 }
 
 let idc = 0
@@ -138,6 +170,8 @@ export const useStore = create<State>()(
       trips: SEED_TRIPS,
       currentUserId: null,
       toast: null,
+      cloudUid: null,
+      syncState: 'off',
 
       setLang: (lang) => set({ lang }),
       showToast: (msg) => set({ toast: msg }),
@@ -442,6 +476,74 @@ export const useStore = create<State>()(
             })),
           }
         }),
+
+      // ----- Cloud sync plumbing -----
+      // None of these are reachable in local mode: `lib/cloud.ts` is the only
+      // caller and every entry point there returns early when cloud is off.
+
+      setSyncState: (state) => set({ syncState: state }),
+
+      setCloudUid: (uid) => set({ cloudUid: uid }),
+
+      setMemberUid: (memberId, uid) =>
+        set((s) => ({
+          members: s.members.map((m) => (m.id === memberId ? { ...m, uid } : m)),
+        })),
+
+      adoptMemberId: (fromId, toId) =>
+        set((s) => remapMemberId({ members: s.members, trips: s.trips, currentUserId: s.currentUserId }, fromId, toId)),
+
+      applyRemoteMembers: (incoming) =>
+        set((s) => {
+          if (incoming.length === 0) return {}
+          const byId = new Map(s.members.map((m) => [m.id, m]))
+          for (const remote of incoming) {
+            if (!remote?.id) continue
+            const local = byId.get(remote.id)
+            // Never let a remote doc clobber the signed-in user's own profile —
+            // that person edits it here and pushes it, not the other way round.
+            if (local && local.id === s.currentUserId) continue
+            if (local) {
+              // `remote` structurally cannot carry phone/email, so the local
+              // (device-only) values for those survive this merge untouched.
+              byId.set(remote.id, { ...local, ...remote })
+            } else {
+              // Someone else's member, first sighting. We do NOT know their
+              // phone and must never guess one — it stays empty on this device.
+              byId.set(remote.id, {
+                phone: '',
+                name: '',
+                role: 'ילד',
+                figure: 'person',
+                color: 'linear-gradient(145deg,#42b8d4,#67d3bd)',
+                ...remote,
+              })
+            }
+          }
+          return { members: [...byId.values()] }
+        }),
+
+      applyRemoteTrip: (trip) =>
+        set((s) => {
+          if (!trip?.id) return {}
+          const local = s.trips.find((t) => t.id === trip.id)
+          if (!local) {
+            const order = s.trips.reduce((mx, x) => Math.max(mx, x.order), -1) + 1
+            return { trips: [...s.trips, { ...trip, order: trip.order ?? order }] }
+          }
+          const winner = pickNewer(local, trip)
+          if (!winner || winner === local) {
+            // Local content wins, but always absorb the cloud's membership set.
+            return { trips: mapTrip(s.trips, trip.id, (t) => ({ ...t, memberUids: trip.memberUids ?? t.memberUids })) }
+          }
+          // Keep the local ordering — `order` is a per-device presentation choice.
+          return { trips: mapTrip(s.trips, trip.id, () => ({ ...trip, order: local.order })) }
+        }),
+
+      markTripPushed: (tripId, updatedAt, memberUids) =>
+        set((s) => ({
+          trips: mapTrip(s.trips, tripId, (t) => ({ ...t, updatedAt, memberUids })),
+        })),
     }),
     {
       name: 'triptales-store',

@@ -4,6 +4,8 @@ import { useStore, useCurrentMember } from '../store/useStore'
 import { useT } from '../i18n/useT'
 import { todayISO } from '../lib/tripSelect'
 import { dayTabLabel } from '../lib/dayFormat'
+import { isCloudEnabled } from '../lib/firebase'
+import { compressDataUrl } from '../lib/compressImage'
 import type { Member } from '../types'
 import { Icon } from '../components/Icon'
 import { Avatar } from '../components/Avatar'
@@ -40,7 +42,18 @@ export function Moment() {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => setDataUrl(String(reader.result))
+    reader.onload = () => {
+      const raw = String(reader.result)
+      // In LOCAL mode the photo is stored byte-for-byte as it is today.
+      // In cloud mode it is downscaled first so it fits one Firestore document
+      // (max 1000px long edge, JPEG q0.6) — `compressDataUrl` falls back to the
+      // original on any failure, so a photo is never lost to compression.
+      if (!isCloudEnabled) {
+        setDataUrl(raw)
+        return
+      }
+      void compressDataUrl(raw).then(setDataUrl)
+    }
     reader.readAsDataURL(file)
   }
 

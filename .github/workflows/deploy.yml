@@ -29,9 +29,22 @@ jobs:
 
       - run: npm run test
 
+      # Firebase web config. These six values are PUBLIC BY DESIGN — they are
+      # compiled into the client bundle that every visitor downloads, they only
+      # IDENTIFY the Firebase project, and they grant NO access on their own.
+      # All access control lives in `firestore.rules`. Google documents this
+      # config as non-secret, so it is committed here in the clear rather than
+      # kept in Actions secrets (one less thing to configure). If you ever fork
+      # this repo to a different Firebase project, change these values.
       - run: npm run build
         env:
           GH_PAGES: true
+          VITE_FIREBASE_API_KEY: AIzaSyC1pNWWXx3h69L_VymYTVJrGu9m2e_2JF0
+          VITE_FIREBASE_AUTH_DOMAIN: triptales-3a452.firebaseapp.com
+          VITE_FIREBASE_PROJECT_ID: triptales-3a452
+          VITE_FIREBASE_STORAGE_BUCKET: triptales-3a452.firebasestorage.app
+          VITE_FIREBASE_MESSAGING_SENDER_ID: "599066258891"
+          VITE_FIREBASE_APP_ID: "1:599066258891:web:294f198d79f5aa03841a4e"
 
       - uses: actions/upload-pages-artifact@v3
         with:

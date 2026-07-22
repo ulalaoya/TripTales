@@ -199,6 +199,14 @@ export const STRINGS = {
     editMyAvatar: 'עריכת האווטאר שלי',
     editParticipant: 'עריכת משתתף',
     doneEditing: 'סיום עריכה',
+    // ----- cloud sync (shown only when Firebase is configured) -----
+    syncConnecting: 'מתחבר…',
+    syncSynced: 'מסונכרן',
+    syncSyncing: 'מסנכרן…',
+    syncOffline: 'לא מחובר',
+    syncTitle: 'סנכרון בין המכשירים',
+    syncFailed: 'הסנכרון נכשל — השינויים נשמרו במכשיר',
+    syncPhotoTooBig: 'התמונה גדולה מדי לסנכרון ונשמרה במכשיר בלבד',
   },
   en: {
     appName: 'TripTales',
@@ -388,6 +396,14 @@ export const STRINGS = {
     editMyAvatar: 'Edit my avatar',
     editParticipant: 'Edit participant',
     doneEditing: 'Done editing',
+    // ----- cloud sync (shown only when Firebase is configured) -----
+    syncConnecting: 'Connecting…',
+    syncSynced: 'Synced',
+    syncSyncing: 'Syncing…',
+    syncOffline: 'Offline',
+    syncTitle: 'Sync across devices',
+    syncFailed: 'Sync failed — your changes are saved on this device',
+    syncPhotoTooBig: 'That photo is too large to sync and stayed on this device',
   },
 } as const
 
