@@ -1,8 +1,10 @@
-import { useState } from 'react'
-import { useStore } from '../store/useStore'
+import { useRef, useState } from 'react'
+import { useStore, useCurrentMember } from '../store/useStore'
 import { useT } from '../i18n/useT'
 import { coverPhotoOf } from '../lib/tripCover'
 import { daysLostWithContent } from '../lib/days'
+import { isCloudEnabled } from '../lib/firebase'
+import { compressDataUrl } from '../lib/compressImage'
 import type { Trip, Photo, Transport } from '../types'
 import { Icon } from './Icon'
 
@@ -18,12 +20,15 @@ export function TripSettings({ trip }: { trip: Trip }) {
   const t = useT()
   const updateTrip = useStore((s) => s.updateTrip)
   const updateTripDates = useStore((s) => s.updateTripDates)
+  const addPhoto = useStore((s) => s.addPhoto)
   const showToast = useStore((s) => s.showToast)
+  const member = useCurrentMember()
 
   const [name, setName] = useState(trip.name)
   const [start, setStart] = useState(trip.startDate)
   const [end, setEnd] = useState(trip.endDate)
   const [confirm, setConfirm] = useState<number | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   // Every approved photo across the trip's album — the cover candidates.
   const approved: Photo[] = []
@@ -33,6 +38,29 @@ export function TripSettings({ trip }: { trip: Trip }) {
   function saveInfo(patch: Partial<Trip>) {
     updateTrip(trip.id, patch)
     showToast(t('tripInfoSaved'))
+  }
+
+  /**
+   * Upload a photo straight from Settings, not tied to a particular day
+   * (Galli feedback). It lands in the trip's album (attached to the first day)
+   * with the normal approval flow, so it can then be picked as the cover below.
+   */
+  function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // let the same file be chosen again later
+    const firstDay = trip.days[0]
+    if (!file || !member || !firstDay) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const raw = String(reader.result)
+      const store = (dataUrl: string) => {
+        const status = addPhoto(trip.id, firstDay.id, { src: dataUrl, caption: '', by: member.id }, member.role)
+        showToast(status === 'pending' ? t('sentForApproval') : t('momentSaved'))
+      }
+      if (isCloudEnabled) compressDataUrl(raw).then(store).catch(() => store(raw))
+      else store(raw)
+    }
+    reader.readAsDataURL(file)
   }
 
   function commitName() {
@@ -99,6 +127,19 @@ export function TripSettings({ trip }: { trip: Trip }) {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Add a photo straight from Settings (not tied to a day) */}
+      <div>
+        <input ref={fileRef} type="file" accept="image/*" onChange={onPickPhoto} className="hidden" />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="secondary-btn tap w-full inline-flex items-center justify-center gap-2 py-2.5 text-sm"
+        >
+          <Icon name="camera" size={18} />
+          {t('addTripPhoto')}
+        </button>
       </div>
 
       {/* Cover photo picker */}
