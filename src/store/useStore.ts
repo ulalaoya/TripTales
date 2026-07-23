@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { idbStorage } from '../lib/idbStorage'
 import type {
   Member,
   Trip,
@@ -65,6 +66,9 @@ interface State {
   cloudUid: string | null
   /** Indicator state. Stays `'off'` for the whole session in local mode. */
   syncState: SyncState
+  /** True once the async (IndexedDB) persisted state has finished rehydrating. */
+  hasHydrated: boolean
+  setHydrated: () => void
 
   setLang: (lang: Lang) => void
   showToast: (msg: string) => void
@@ -221,6 +225,8 @@ export const useStore = create<State>()(
       activeDay: {},
       cloudUid: null,
       syncState: 'off',
+      hasHydrated: false,
+      setHydrated: () => set({ hasHydrated: true }),
 
       setLang: (lang) => set({ lang }),
       showToast: (msg) => set({ toast: msg }),
@@ -612,6 +618,13 @@ export const useStore = create<State>()(
     {
       name: 'triptales-store',
       version: 5,
+      // IndexedDB, not localStorage: photos (base64) blow localStorage's ~5 MB
+      // quota, and its synchronous `setItem` threw QuotaExceededError mid-render.
+      // `idbStorage` also migrates any existing localStorage data on first read.
+      storage: createJSONStorage(() => idbStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated()
+      },
       partialize: (s) => ({
         lang: s.lang,
         members: s.members,

@@ -116,7 +116,13 @@ function AppRoutes() {
 export default function App() {
   useHtmlDir()
   const currentUserId = useStore((s) => s.currentUserId)
+  const hasHydrated = useStore((s) => s.hasHydrated)
   useCloudSession(currentUserId)
+
+  // The persisted store now loads from IndexedDB (async). Until it has
+  // rehydrated, render a blank canvas so a logged-in user never flashes the
+  // Welcome screen for a frame.
+  if (!hasHydrated) return <div className="paper min-h-full" />
 
   // basename נגזר מ-base של Vite כדי שהראוטר יעבוד גם תחת /TripTales/ ב-GitHub Pages
   return (
