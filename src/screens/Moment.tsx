@@ -22,6 +22,7 @@ export function Moment() {
   const trip = useStore((s) => s.trips.find((x) => x.id === tripId))
   const addPhoto = useStore((s) => s.addPhoto)
   const showToast = useStore((s) => s.showToast)
+  const activeDayId = useStore((s) => (tripId ? s.activeDay[tripId] : undefined))
 
   const tripMembers = (trip?.members ?? []).map((id) => members.find((m) => m.id === id)).filter(Boolean) as Member[]
 
@@ -32,6 +33,9 @@ export function Moment() {
   const [people, setPeople] = useState<string[]>(trip?.members ?? [])
   const [dayId, setDayId] = useState<string>(() => {
     if (!trip || trip.days.length === 0) return ''
+    // Default to the day you were just looking at in the planner (Item 1); then
+    // fall back to today's date, and finally to the trip's last day.
+    if (activeDayId && trip.days.some((d) => d.id === activeDayId)) return activeDayId
     const today = todayISO()
     return (trip.days.find((d) => d.date === today) ?? trip.days[trip.days.length - 1]).id
   })

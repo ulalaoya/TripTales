@@ -52,6 +52,14 @@ interface State {
   currentUserId: string | null
   toast: string | null
 
+  /**
+   * The day the user last looked at inside each trip's planner, keyed by trip id.
+   * NEVER persisted (excluded from `partialize`) — it is a within-session UI hint
+   * so the ➕ "new moment" composer can default to the day you are standing on
+   * (Galli feedback — Item 1) instead of always the trip's last day.
+   */
+  activeDay: Record<string, string>
+
   // ----- Cloud sync (NEVER persisted; always inert in local mode) -----
   /** Firebase Anonymous Auth uid, once signed in. `null` in local mode. */
   cloudUid: string | null
@@ -61,6 +69,8 @@ interface State {
   setLang: (lang: Lang) => void
   showToast: (msg: string) => void
   clearToast: () => void
+  /** Remember which day of a trip the planner is currently showing. */
+  setActiveDay: (tripId: string, dayId: string) => void
 
   login: (rawPhone: string) => LoginResult
   registerMember: (m: Omit<Member, 'id'>) => Member
@@ -120,6 +130,8 @@ interface State {
   ) => Photo['status']
   approvePhoto: (tripId: string, dayId: string, photoId: string) => void
   rejectPhoto: (tripId: string, dayId: string, photoId: string) => void
+  /** Remove a photo (any status) — used by the album/planner delete control. */
+  deletePhoto: (tripId: string, dayId: string, photoId: string) => void
   toggleFav: (tripId: string, dayId: string, photoId: string) => void
 
   reactEntry: (tripId: string, dayId: string, entryId: string, emoji: string, memberId: string) => void
@@ -206,12 +218,15 @@ export const useStore = create<State>()(
       trips: SEED_TRIPS,
       currentUserId: null,
       toast: null,
+      activeDay: {},
       cloudUid: null,
       syncState: 'off',
 
       setLang: (lang) => set({ lang }),
       showToast: (msg) => set({ toast: msg }),
       clearToast: () => set({ toast: null }),
+      setActiveDay: (tripId, dayId) =>
+        set((s) => (s.activeDay[tripId] === dayId ? {} : { activeDay: { ...s.activeDay, [tripId]: dayId } })),
 
       login: (rawPhone) => {
         const phone = normalizePhone(rawPhone)
@@ -419,6 +434,13 @@ export const useStore = create<State>()(
         })),
 
       rejectPhoto: (tripId, dayId, photoId) =>
+        set((s) => ({
+          trips: editTrip(s.trips, tripId, (t) =>
+            mapDays(t, dayId, (d) => ({ ...d, photos: d.photos.filter((p) => p.id !== photoId) })),
+          ),
+        })),
+
+      deletePhoto: (tripId, dayId, photoId) =>
         set((s) => ({
           trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({ ...d, photos: d.photos.filter((p) => p.id !== photoId) })),

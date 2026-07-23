@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import { useParams, Navigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
@@ -21,11 +21,9 @@ import { useStore, useCurrentMember } from '../store/useStore'
 import { useT } from '../i18n/useT'
 import { locationHref, locationLabel } from '../lib/locationLink'
 import { canPlanTrip, isTripMember } from '../lib/tripPermissions'
-import { daysLostWithContent } from '../lib/days'
-import { coverPhotoOf } from '../lib/tripCover'
 import { dayTabLabel, weekdayWord, dayMonth } from '../lib/dayFormat'
 import { sortActivitiesByTime } from '../lib/sortActivities'
-import type { Trip, Day, Activity, ActivityAttachment, Member, Photo, Transport } from '../types'
+import type { Day, Activity, ActivityAttachment, Member, Photo } from '../types'
 import { Icon } from '../components/Icon'
 import { LocationField } from '../components/LocationField'
 import { AttachmentField } from '../components/AttachmentField'
@@ -39,6 +37,7 @@ const prefersReducedMotion = () =>
 
 export function TripView() {
   const t = useT()
+  const navigate = useNavigate()
   const { tripId } = useParams()
   const member = useCurrentMember()!
   const members = useStore((s) => s.members)
@@ -49,14 +48,12 @@ export function TripView() {
   const deleteActivity = useStore((s) => s.deleteActivity)
   const reorderActivity = useStore((s) => s.reorderActivity)
   const moveActivity = useStore((s) => s.moveActivity)
-  const updateTripDates = useStore((s) => s.updateTripDates)
-  const updateTrip = useStore((s) => s.updateTrip)
   const updateDayTitle = useStore((s) => s.updateDayTitle)
   const addPhoto = useStore((s) => s.addPhoto)
   const showToast = useStore((s) => s.showToast)
+  const setActiveDay = useStore((s) => s.setActiveDay)
 
   const [dayIdx, setDayIdx] = useState(0)
-  const [settingsOpen, setSettingsOpen] = useState(false)
 
   // Reorder only on a deliberate LONG-PRESS (Galli feedback — Item 2). With a
   // delay + tolerance activation, a quick swipe over the list scrolls normally
@@ -67,6 +64,15 @@ export function TripView() {
     useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
+
+  // Remember the day being viewed so the ➕ "new moment" composer defaults to it
+  // (Galli feedback — Item 1). Guarded so it stays inert when the trip is gone.
+  const daysLen = trip?.days.length ?? 0
+  useEffect(() => {
+    if (!trip) return
+    const d = trip.days[Math.min(dayIdx, daysLen - 1)]
+    if (d) setActiveDay(trip.id, d.id)
+  }, [trip, dayIdx, daysLen, setActiveDay])
 
   if (!trip) return <Navigate to="/trips" replace />
 
@@ -114,30 +120,15 @@ export function TripView() {
             canPlan ? (
               <button
                 type="button"
-                onClick={() => setSettingsOpen((v) => !v)}
+                onClick={() => navigate(`/trips/${trip.id}/people`)}
                 aria-label={t('tripSettings')}
-                aria-expanded={settingsOpen}
                 className="tap p-2 text-[var(--ink)] shrink-0"
               >
-                <Icon name="edit" size={20} />
+                <Icon name="settings" size={20} />
               </button>
             ) : undefined
           }
         />
-
-        {settingsOpen && canPlan && (
-          <TripSettings
-            trip={trip}
-            t={t}
-            onClose={() => setSettingsOpen(false)}
-            onSaveInfo={(patch) => updateTrip(trip.id, patch)}
-            onSaveDates={(s, e) => {
-              updateTripDates(trip.id, s, e)
-              setSettingsOpen(false)
-              setDayIdx(0)
-            }}
-          />
-        )}
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           {/* Day tabs — navigated by DATE (also cross-day drop targets) */}
@@ -653,187 +644,3 @@ function ActivityForm({
   )
 }
 
-function TripSettings({
-  trip,
-  t,
-  onClose,
-  onSaveInfo,
-  onSaveDates,
-}: {
-  trip: Trip
-  t: ReturnType<typeof useT>
-  onClose: () => void
-  onSaveInfo: (patch: Partial<Trip>) => void
-  onSaveDates: (start: string, end: string) => void
-}) {
-  const [name, setName] = useState(trip.name)
-  const [start, setStart] = useState(trip.startDate)
-  const [end, setEnd] = useState(trip.endDate)
-  const [confirm, setConfirm] = useState<number | null>(null)
-
-  // Every approved photo across the trip's album — the cover candidates (#20).
-  const approved: Photo[] = []
-  for (const d of trip.days) for (const p of d.photos) if (p.status === 'approved') approved.push(p)
-  const current = coverPhotoOf(trip)
-
-  function commitName() {
-    const next = name.trim()
-    if (next && next !== trip.name) onSaveInfo({ name: next })
-  }
-
-  function attemptDates(e: React.FormEvent) {
-    e.preventDefault()
-    const lost = daysLostWithContent(start, end, trip.days)
-    if (lost.length > 0) {
-      setConfirm(lost.length)
-      return
-    }
-    onSaveDates(start, end)
-  }
-
-  return (
-    <div className="journal-lined p-4 mb-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-display text-base">{t('editTripTitle')}</h3>
-        <button type="button" onClick={onClose} aria-label={t('cancel')} className="tap p-1 text-[var(--muted)]">
-          <Icon name="close" size={18} />
-        </button>
-      </div>
-
-      {/* Trip NAME (Galli feedback #15) */}
-      <div>
-        <label htmlFor="ts-name" className="block text-xs font-medium mb-1">{t('tripName')}</label>
-        <input
-          id="ts-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={commitName}
-          className="tap w-full rounded-[14px] px-3 py-2.5 bg-white border border-[var(--line)] outline-none font-hand text-lg"
-        />
-      </div>
-
-      {/* Trip ICON — transport (Galli feedback #15) */}
-      <div>
-        <span className="block text-xs font-medium mb-1">{t('tripIconLabel')}</span>
-        <div
-          className="inline-flex rounded-[14px] overflow-hidden border border-[var(--line)] bg-white"
-          role="radiogroup"
-          aria-label={t('tripIconLabel')}
-        >
-          {(['flight', 'drive'] as Transport[]).map((tr) => (
-            <button
-              key={tr}
-              type="button"
-              role="radio"
-              aria-checked={trip.transport === tr}
-              onClick={() => onSaveInfo({ transport: tr })}
-              className={`tap inline-flex items-center gap-1 px-4 py-2 text-sm font-medium ${
-                trip.transport === tr ? 'bg-[var(--ink)] text-white' : 'text-[var(--ink)]'
-              }`}
-            >
-              <Icon name={tr === 'flight' ? 'plane' : 'car'} size={18} directional />
-              {tr === 'flight' ? t('flight') : t('drive')}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Cover photo picker (Galli feedback #20) */}
-      <div>
-        <span className="block text-xs font-medium mb-1">{t('coverPhotoLabel')}</span>
-        {approved.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">{t('noApprovedPhotos')}</p>
-        ) : (
-          <div className="grid grid-cols-4 gap-2">
-            <button
-              type="button"
-              onClick={() => onSaveInfo({ coverPhotoId: undefined })}
-              aria-pressed={!trip.coverPhotoId}
-              className={`tap rounded-[12px] border p-1 text-[10px] leading-tight text-center ${
-                !trip.coverPhotoId ? 'border-[var(--coral)] ring-2 ring-[var(--coral)]' : 'border-[var(--line)]'
-              }`}
-              style={{ minHeight: 56 }}
-            >
-              {t('coverFirstPhoto')}
-            </button>
-            {approved.map((p) => {
-              const chosen = current?.id === p.id
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => onSaveInfo({ coverPhotoId: p.id })}
-                  aria-pressed={chosen}
-                  aria-label={p.caption || t('coverPhotoLabel')}
-                  className={`tap rounded-[12px] overflow-hidden border ${
-                    chosen ? 'border-[var(--coral)] ring-2 ring-[var(--coral)]' : 'border-[var(--line)]'
-                  }`}
-                >
-                  {p.svg ? (
-                    <span className="block" dangerouslySetInnerHTML={{ __html: p.svg }} />
-                  ) : (
-                    <img src={p.src} alt={p.caption} style={{ display: 'block', width: '100%', height: 56, objectFit: 'cover' }} />
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Dates — extend to add days, shrink to remove (Galli feedback #8) */}
-      <form onSubmit={attemptDates} className="space-y-3">
-        <span className="block text-xs font-medium">{t('editDates')}</span>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium mb-1">{t('startDate')}</label>
-            <input
-              type="date"
-              dir="ltr"
-              value={start}
-              onChange={(e) => setStart(e.target.value)}
-              className="tap w-full rounded-[14px] px-3 py-2 bg-white border border-[var(--line)] outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">{t('endDate')}</label>
-            <input
-              type="date"
-              dir="ltr"
-              value={end}
-              min={start || undefined}
-              onChange={(e) => setEnd(e.target.value)}
-              className="tap w-full rounded-[14px] px-3 py-2 bg-white border border-[var(--line)] outline-none"
-            />
-          </div>
-        </div>
-        {confirm !== null ? (
-          <div role="alertdialog" aria-live="assertive" className="rounded-[14px] border border-[var(--danger)] bg-white p-3">
-            <p className="text-sm font-semibold text-[var(--danger)] mb-1">{t('shrinkWarnTitle')}</p>
-            <p className="text-sm text-[var(--ink)] mb-2">{t.fn('shrinkWarnBody')(confirm)}</p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => onSaveDates(start, end)}
-                className="tap px-4 py-2 rounded-[14px] bg-[var(--danger)] text-white text-sm font-semibold"
-              >
-                {t('confirm')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirm(null)}
-                className="tap px-4 py-2 rounded-[14px] border border-[var(--line)] bg-white text-sm"
-              >
-                {t('cancel')}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button type="submit" className="primary-btn tap px-4 text-sm">
-            {t('save')}
-          </button>
-        )}
-      </form>
-    </div>
-  )
-}

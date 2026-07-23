@@ -23,11 +23,19 @@ export function PhotoTile({ photo, tripId, dayId, isParent, member, author }: Pr
   const t = useT()
   const approvePhoto = useStore((s) => s.approvePhoto)
   const rejectPhoto = useStore((s) => s.rejectPhoto)
+  const deletePhoto = useStore((s) => s.deletePhoto)
   const toggleFav = useStore((s) => s.toggleFav)
   const reactPhoto = useStore((s) => s.reactPhoto)
 
   const isPending = photo.status === 'pending'
   const dimmed = isPending && !isParent
+  // A photo can be removed by an adult who manages the trip, or by whoever
+  // uploaded it (Galli feedback — Item 3). Confirmed first — it is irreversible.
+  const canDelete = isParent || photo.by === member.id
+
+  function remove() {
+    if (window.confirm(t('deletePhotoConfirm'))) deletePhoto(tripId, dayId, photo.id)
+  }
 
   return (
     <div className="relative">
@@ -36,6 +44,19 @@ export function PhotoTile({ photo, tripId, dayId, isParent, member, author }: Pr
           <div className="pending-pill absolute top-2 text-[10px] z-10 px-2 py-0.5" style={{ insetInlineStart: 8 }}>
             {t('pending')}
           </div>
+        )}
+        {/* Delete — a glass trash button on approved tiles (never collides with
+            the pending pill, which only shows before approval). */}
+        {photo.status === 'approved' && canDelete && (
+          <button
+            type="button"
+            onClick={remove}
+            aria-label={t('deletePhoto')}
+            className="tap absolute top-1 z-10 p-1.5 rounded-full"
+            style={{ insetInlineStart: 6, color: '#fff', background: 'rgba(23,31,48,.42)', backdropFilter: 'blur(4px)' }}
+          >
+            <Icon name="trash" size={18} />
+          </button>
         )}
         {/* Favourite is a clearly-labelled STAR on the image corner — no longer a
             heart next to the name that got confused with the chosen reaction
@@ -96,6 +117,18 @@ export function PhotoTile({ photo, tripId, dayId, isParent, member, author }: Pr
             {t('reject')}
           </button>
         </div>
+      )}
+
+      {/* The uploader can retract their own photo while it still awaits approval. */}
+      {isPending && !isParent && photo.by === member.id && (
+        <button
+          type="button"
+          onClick={remove}
+          className="tap mt-1 w-full inline-flex items-center justify-center gap-1 py-1.5 rounded-full bg-white border border-[var(--line)] text-[var(--danger)] text-sm font-semibold"
+        >
+          <Icon name="trash" size={16} />
+          {t('deletePhoto')}
+        </button>
       )}
     </div>
   )

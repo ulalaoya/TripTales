@@ -83,6 +83,14 @@ export function Dashboard() {
     navigate(`/trips/${tripId}`)
   }
 
+  /** Dismiss the join sheet cleanly, restoring the trips list underneath
+      (Galli feedback — Item 7: cancelling must return you where you were). */
+  function closeJoin() {
+    setJoinOpen(false)
+    setCode('')
+    setJoinErr('')
+  }
+
   async function submitJoin(e: React.FormEvent) {
     e.preventDefault()
     setJoinErr('')
@@ -129,19 +137,25 @@ export function Dashboard() {
   return (
     <div className="paper min-h-full">
       <div className="max-w-column mx-auto px-5 py-5">
-        <header className="flex justify-between items-center mb-5">
-          <Logo variant="emboss" size="sm" />
-          <div className="flex items-center gap-2">
+        {/* Header (Galli feedback — Item 6): brand mark + language on the LEFT
+            (matching every in-trip screen), the user's avatar + name on the
+            RIGHT. In RTL the first child sits at the visual right. */}
+        <header className="flex justify-between items-center gap-2 mb-5">
+          <button
+            type="button"
+            onClick={() => navigate('/profile/edit')}
+            aria-label={t('profile')}
+            className="tap inline-flex items-center gap-2 min-w-0"
+          >
+            <Avatar figure={member.figure} color={member.color} size={40} />
+            <span className="font-semibold text-sm truncate max-w-[7.5rem]">
+              {member.name.split(' ')[0] || member.name}
+            </span>
+          </button>
+          <div className="flex items-center gap-2 shrink-0">
             <SyncBadge />
             <LangToggle />
-            <button
-              type="button"
-              onClick={() => navigate('/profile/edit')}
-              aria-label={t('profile')}
-              className="tap"
-            >
-              <Avatar figure={member.figure} color={member.color} size={40} />
-            </button>
+            <Logo variant="emboss" size="sm" />
           </div>
         </header>
 
@@ -217,7 +231,7 @@ export function Dashboard() {
                         directional
                         className="text-[var(--coral)] shrink-0"
                       />
-                      <h3 className="font-hand text-lg truncate">{trip.name}</h3>
+                      <h3 className="text-lg font-bold truncate">{trip.name}</h3>
                     </div>
                     <p className="text-xs text-[var(--muted)] mt-1">
                       <bdi>
@@ -248,6 +262,16 @@ export function Dashboard() {
                   </button>
                   {isParent && editMode && (
                     <>
+                      {/* Edit a trip → its Settings screen, where all the trip's
+                          metadata lives (Galli feedback — Item 9). */}
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/trips/${trip.id}/people`)}
+                        aria-label={t('editTripInfo')}
+                        className="tap p-2 text-[var(--ink)]"
+                      >
+                        <Icon name="settings" size={18} />
+                      </button>
                       <button
                         type="button"
                         onClick={() => reorderTrip(trip.id, -1)}
@@ -286,7 +310,7 @@ export function Dashboard() {
             "תכנון טיול חדש" stays adult-only; "הצטרפות עם קוד" is for everyone. */}
         <div className="mt-4 space-y-3">
           {/* Primary CTA — plan a new trip (adults only) */}
-          {can(member.role, 'trip.create') && !joinOpen && (
+          {can(member.role, 'trip.create') && (
             <button
               type="button"
               onClick={() => navigate('/trips/new')}
@@ -297,54 +321,80 @@ export function Dashboard() {
             </button>
           )}
 
-          {/* Secondary CTA — join with a code (everyone) */}
-          {joinOpen ? (
-            <form onSubmit={submitJoin} className="journal-lined p-4 space-y-3">
-              <label htmlFor="join-code" className="block text-sm font-medium">
-                {t('enterCode')}
-              </label>
-              <input
-                id="join-code"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                dir="ltr"
-                autoFocus
-                maxLength={12}
-                className="tap w-full rounded-[14px] px-3 py-2.5 bg-white border border-[var(--line)] outline-none text-center tracking-[0.3em] uppercase font-mono"
-                aria-invalid={!!joinErr}
-                aria-describedby="join-err"
-              />
-              <div id="join-err" aria-live="assertive" className="min-h-[1.1rem] text-sm text-[var(--danger)]">
-                {joinErr}
-              </div>
-              <div className="flex gap-2">
-                <button type="submit" className="primary-btn tap px-4 text-sm">
-                  {t('join')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setJoinOpen(false)
-                    setJoinErr('')
-                  }}
-                  className="tap px-4 rounded-[14px] border border-[var(--line)] bg-white text-sm"
-                >
-                  {t('cancel')}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setJoinOpen(true)}
-              className="secondary-btn tap w-full py-3 text-lg inline-flex items-center justify-center gap-2"
-            >
-              <Icon name="users" size={20} />
-              {t('joinWithCode')}
-            </button>
-          )}
+          {/* Secondary CTA — join with a code (everyone) → opens a dismissible sheet */}
+          <button
+            type="button"
+            onClick={() => setJoinOpen(true)}
+            className="secondary-btn tap w-full py-3 text-lg inline-flex items-center justify-center gap-2"
+          >
+            <Icon name="users" size={20} />
+            {t('joinWithCode')}
+          </button>
         </div>
       </div>
+
+      {/* Join-by-code sheet (Galli feedback — Item 7): a real modal over the
+          trips list. Tapping the backdrop, Cancel or Esc dismisses it and lands
+          you back exactly where you were. */}
+      {joinOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('enterCode')}
+          onClick={closeJoin}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') closeJoin()
+          }}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ background: 'rgba(23,31,48,.5)' }}
+        >
+          <form
+            onSubmit={submitJoin}
+            onClick={(e) => e.stopPropagation()}
+            className="journal-lined w-full max-w-column p-5 space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <label htmlFor="join-code" className="block text-base font-semibold">
+                {t('enterCode')}
+              </label>
+              <button
+                type="button"
+                onClick={closeJoin}
+                aria-label={t('cancel')}
+                className="tap p-1 text-[var(--muted)]"
+              >
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+            <input
+              id="join-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              dir="ltr"
+              autoFocus
+              maxLength={12}
+              className="tap w-full rounded-[14px] px-3 py-2.5 bg-white border border-[var(--line)] outline-none text-center tracking-[0.3em] uppercase font-mono"
+              aria-invalid={!!joinErr}
+              aria-describedby="join-err"
+            />
+            <div id="join-err" aria-live="assertive" className="min-h-[1.1rem] text-sm text-[var(--danger)]">
+              {joinErr}
+            </div>
+            <div className="flex gap-2">
+              <button type="submit" className="primary-btn tap flex-1 py-2.5 text-sm">
+                {t('join')}
+              </button>
+              <button
+                type="button"
+                onClick={closeJoin}
+                className="tap px-4 rounded-[14px] border border-[var(--line)] bg-white text-sm"
+              >
+                {t('cancel')}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }

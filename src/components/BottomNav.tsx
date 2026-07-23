@@ -23,7 +23,7 @@ export function TripBottomNav({ tripId }: { tripId: string }) {
         <Icon name="plus" size={26} />
       </NavLink>
       <NavItem to={`${base}/checklist`} icon="checkSquare" labelKey="navGear" t={t} />
-      <NavItem to={`${base}/people`} icon="users" labelKey="navSettings" t={t} />
+      <NavItem to={`${base}/people`} icon="settings" labelKey="navSettings" t={t} />
     </nav>
   )
 }

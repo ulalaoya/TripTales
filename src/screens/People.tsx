@@ -9,6 +9,7 @@ import { Icon } from '../components/Icon'
 import { Avatar } from '../components/Avatar'
 import { ParticipantRow, type ParticipantDraft } from '../components/ParticipantRow'
 import { TripHeader } from '../components/TripHeader'
+import { TripSettings } from '../components/TripSettings'
 
 export function People() {
   const t = useT()
@@ -57,6 +58,10 @@ export function People() {
     <div className="paper min-h-full">
       <div className="max-w-column mx-auto px-5 py-5">
         <TripHeader trip={trip} subtitle={t('settingsTitle')} />
+
+        {/* Trip metadata — name, transport, cover, dates (Items 4 + 9).
+            Only trip-planners can edit; everyone else just sees the members. */}
+        {canManage && <TripSettings trip={trip} />}
 
         {/* Join code panel */}
         <div className="check-head mb-2">

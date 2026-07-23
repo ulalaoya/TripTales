@@ -47,7 +47,7 @@ export function TripHeader({ trip, subtitle, action }: Props) {
             directional
             className="text-[var(--coral)] shrink-0"
           />
-          <h1 className="font-hand text-3xl font-bold leading-tight truncate">{trip.name}</h1>
+          <h1 className="text-3xl font-extrabold leading-tight truncate">{trip.name}</h1>
         </div>
         {action}
       </div>

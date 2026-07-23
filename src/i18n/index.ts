@@ -213,10 +213,17 @@ export const STRINGS = {
     syncConnecting: 'מתחבר…',
     syncSynced: 'מסונכרן',
     syncSyncing: 'מסנכרן…',
-    syncOffline: 'לא מחובר',
-    syncTitle: 'סנכרון בין המכשירים',
+    syncOffline: 'נשמר במכשיר',
+    syncTitle: 'אין כרגע חיבור לענן. השינויים נשמרים במכשיר ויסתנכרנו אוטומטית כשהחיבור יחזור.',
     syncFailed: 'הסנכרון נכשל — השינויים נשמרו במכשיר',
     syncPhotoTooBig: 'התמונה גדולה מדי לסנכרון ונשמרה במכשיר בלבד',
+    // ----- photo delete (Item 3) -----
+    deletePhoto: 'מחיקת התמונה',
+    deletePhotoConfirm: 'למחוק את התמונה? הפעולה אינה הפיכה.',
+    // ----- trip settings screen (Items 4 + 9) -----
+    tripInfoSaved: 'פרטי הטיול נשמרו',
+    datesSaved: 'התאריכים עודכנו',
+    editTripInfo: 'עריכת הטיול',
   },
   en: {
     appName: 'TripTales',
@@ -420,10 +427,17 @@ export const STRINGS = {
     syncConnecting: 'Connecting…',
     syncSynced: 'Synced',
     syncSyncing: 'Syncing…',
-    syncOffline: 'Offline',
-    syncTitle: 'Sync across devices',
+    syncOffline: 'Saved on device',
+    syncTitle: 'No cloud connection right now. Changes are saved on this device and will sync automatically when the connection returns.',
     syncFailed: 'Sync failed — your changes are saved on this device',
     syncPhotoTooBig: 'That photo is too large to sync and stayed on this device',
+    // ----- photo delete (Item 3) -----
+    deletePhoto: 'Delete photo',
+    deletePhotoConfirm: 'Delete this photo? This cannot be undone.',
+    // ----- trip settings screen (Items 4 + 9) -----
+    tripInfoSaved: 'Trip details saved',
+    datesSaved: 'Dates updated',
+    editTripInfo: 'Edit trip',
   },
 } as const
 
