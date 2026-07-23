@@ -224,6 +224,17 @@ export const STRINGS = {
     tripInfoSaved: 'פרטי הטיול נשמרו',
     datesSaved: 'התאריכים עודכנו',
     editTripInfo: 'עריכת הטיול',
+    // ----- resilience: error boundary + safe fallbacks -----
+    loading: 'טוען…',
+    errBoundaryTitle: 'משהו השתבש',
+    errBoundaryBody: 'אירעה שגיאה בלתי צפויה. אפשר לרענן את הדף או לחזור לרשימת הטיולים.',
+    errBoundaryReload: 'רענון',
+    errBoundaryHome: 'חזרה לטיולים',
+    errBoundaryDetails: 'פרטים טכניים',
+    tripHasNoDays: 'לטיול הזה עדיין אין ימים',
+    photoAddFailed: 'הוספת התמונה נכשלה. נסו שוב.',
+    // ----- add photo from settings -----
+    addTripPhoto: 'הוספת תמונה לטיול',
   },
   en: {
     appName: 'TripTales',
@@ -438,6 +449,17 @@ export const STRINGS = {
     tripInfoSaved: 'Trip details saved',
     datesSaved: 'Dates updated',
     editTripInfo: 'Edit trip',
+    // ----- resilience: error boundary + safe fallbacks -----
+    loading: 'Loading…',
+    errBoundaryTitle: 'Something went wrong',
+    errBoundaryBody: 'An unexpected error occurred. You can refresh the page or go back to your trips.',
+    errBoundaryReload: 'Refresh',
+    errBoundaryHome: 'Back to trips',
+    errBoundaryDetails: 'Technical details',
+    tripHasNoDays: 'This trip has no days yet',
+    photoAddFailed: 'Adding the photo failed. Please try again.',
+    // ----- add photo from settings -----
+    addTripPhoto: 'Add a photo to the trip',
   },
 } as const
 

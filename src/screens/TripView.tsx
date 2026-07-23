@@ -75,6 +75,9 @@ export function TripView() {
   }, [trip, dayIdx, daysLen, setActiveDay])
 
   if (!trip) return <Navigate to="/trips" replace />
+  // A trip should always have ≥1 day, but a malformed/partial trip (e.g. a
+  // mid-sync cloud document) must never crash the planner into a white screen.
+  if (trip.days.length === 0) return <Navigate to="/trips" replace />
 
   const canPlan = canPlanTrip(trip, member)
   const canUpload = isTripMember(trip, member.id)

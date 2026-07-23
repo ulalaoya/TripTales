@@ -78,9 +78,20 @@ export function remapMemberId(state: IdentityState, fromId: string, toId: string
     })),
   }))
 
-  return {
-    members,
-    trips,
-    currentUserId: state.currentUserId === fromId ? toId : state.currentUserId,
-  }
+  const remapped = state.currentUserId === fromId ? toId : state.currentUserId
+
+  // SAFETY NET (root cause of Galli's white screen): never leave `currentUserId`
+  // pointing at a member that does not exist in `members`. That can happen when
+  // this runs with a `fromId` whose member was already merged away by a prior
+  // remap (a cloud-snapshot race) — the `else` branch above would then set
+  // currentUserId to a `toId` for which no member row exists, and every screen's
+  // `useCurrentMember()!` would crash. Fall back to a real member instead.
+  const has = (id: string | null): boolean => !!id && members.some((m) => m.id === id)
+  const currentUserId = has(remapped)
+    ? remapped
+    : has(state.currentUserId)
+      ? state.currentUserId
+      : (members[0]?.id ?? null)
+
+  return { members, trips, currentUserId }
 }

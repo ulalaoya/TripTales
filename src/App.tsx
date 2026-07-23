@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams, useNavigate } from 'react-router-dom'
 import { useStore } from './store/useStore'
 import { cloudSignIn, cloudStop } from './lib/cloud'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { TripBottomNav } from './components/BottomNav'
 import { Toast } from './components/Toast'
 import { Welcome } from './screens/Welcome'
@@ -64,14 +65,16 @@ function useCloudSession(currentUserId: string | null) {
   }, [currentUserId])
 }
 
-export default function App() {
-  useHtmlDir()
+/**
+ * The routed tree, wrapped in an ErrorBoundary. Lives INSIDE the router so the
+ * boundary's "back to trips" recovery can do a real SPA navigation. Any screen
+ * that throws during render is caught here instead of white-screening the app.
+ */
+function AppRoutes() {
+  const navigate = useNavigate()
   const currentUserId = useStore((s) => s.currentUserId)
-  useCloudSession(currentUserId)
-
-  // basename נגזר מ-base של Vite כדי שהראוטר יעבוד גם תחת /TripTales/ ב-GitHub Pages
   return (
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
+    <ErrorBoundary onReset={() => navigate('/trips')}>
       {!currentUserId ? (
         <Routes>
           <Route path="/" element={<Welcome />} />
@@ -106,6 +109,19 @@ export default function App() {
           </Route>
         </Routes>
       )}
+    </ErrorBoundary>
+  )
+}
+
+export default function App() {
+  useHtmlDir()
+  const currentUserId = useStore((s) => s.currentUserId)
+  useCloudSession(currentUserId)
+
+  // basename נגזר מ-base של Vite כדי שהראוטר יעבוד גם תחת /TripTales/ ב-GitHub Pages
+  return (
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <AppRoutes />
     </BrowserRouter>
   )
 }

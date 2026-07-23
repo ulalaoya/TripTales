@@ -57,8 +57,11 @@ export function Moment() {
         setDataUrl(raw)
         return
       }
-      void compressDataUrl(raw).then(setDataUrl)
+      // Never let a compression failure block adding the photo (or bubble into a
+      // white screen) — fall back to the original bytes.
+      compressDataUrl(raw).then(setDataUrl).catch(() => setDataUrl(raw))
     }
+    reader.onerror = () => setError(t('photoRequired'))
     reader.readAsDataURL(file)
   }
 
@@ -78,14 +81,19 @@ export function Moment() {
       setError(t('photoRequired'))
       return
     }
-    const status = addPhoto(
-      trip!.id,
-      dayId,
-      { src: dataUrl, caption: caption.trim(), by: member.id, mood, people },
-      member.role,
-    )
-    showToast(status === 'pending' ? t('sentForApproval') : t('momentSaved'))
-    navigate(`/trips/${trip!.id}/album`)
+    try {
+      const status = addPhoto(
+        trip!.id,
+        dayId,
+        { src: dataUrl, caption: caption.trim(), by: member.id, mood, people },
+        member.role,
+      )
+      showToast(status === 'pending' ? t('sentForApproval') : t('momentSaved'))
+      navigate(`/trips/${trip!.id}/album`)
+    } catch {
+      // Saving must never dead-end on a white screen — surface a toast instead.
+      showToast(t('syncFailed'))
+    }
   }
 
   return (
