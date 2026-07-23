@@ -149,6 +149,11 @@ export interface Trip {
    * `lib/tripCover.coverPhotoOf`.
    */
   coverPhotoId?: string
+  /**
+   * Colour palette applied inside this trip's screens (see `lib/palettes`).
+   * Absent or `'coral'` = the default "Coral Journey" theme.
+   */
+  paletteId?: string
   /** Equipment / packing checklist groups. */
   checklist?: ChecklistGroup[]
   /**

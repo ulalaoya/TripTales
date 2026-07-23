@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useStore, useCurrentMember } from '../store/useStore'
 import { useT } from '../i18n/useT'
 import { coverPhotoOf } from '../lib/tripCover'
+import { PALETTES } from '../lib/palettes'
 import { daysLostWithContent } from '../lib/days'
 import { isCloudEnabled } from '../lib/firebase'
 import { compressDataUrl } from '../lib/compressImage'
@@ -22,7 +23,9 @@ export function TripSettings({ trip }: { trip: Trip }) {
   const updateTripDates = useStore((s) => s.updateTripDates)
   const addPhoto = useStore((s) => s.addPhoto)
   const showToast = useStore((s) => s.showToast)
+  const lang = useStore((s) => s.lang)
   const member = useCurrentMember()
+  const activePalette = trip.paletteId ?? 'coral'
 
   const [name, setName] = useState(trip.name)
   const [start, setStart] = useState(trip.startDate)
@@ -183,6 +186,36 @@ export function TripSettings({ trip }: { trip: Trip }) {
             })}
           </div>
         )}
+      </div>
+
+      {/* Colour palette — themes this trip's screens (default = Coral Journey) */}
+      <div>
+        <span className="block text-xs font-medium mb-1">{t('paletteLabel')}</span>
+        <div className="space-y-2" role="radiogroup" aria-label={t('paletteLabel')}>
+          {PALETTES.map((p) => {
+            const chosen = activePalette === p.id
+            return (
+              <button
+                key={p.id}
+                type="button"
+                role="radio"
+                aria-checked={chosen}
+                onClick={() => saveInfo({ paletteId: p.id })}
+                className={`tap w-full flex items-center gap-2 rounded-[14px] border p-2 bg-white ${
+                  chosen ? 'border-[var(--coral)] ring-2 ring-[var(--coral)]' : 'border-[var(--line)]'
+                }`}
+              >
+                <span className="flex rounded-md overflow-hidden shrink-0" aria-hidden>
+                  {p.swatch.map((c, i) => (
+                    <span key={i} style={{ background: c, width: 16, height: 22 }} />
+                  ))}
+                </span>
+                <span className="text-sm text-[var(--ink)] truncate">{p.name[lang]}</span>
+                {chosen && <Icon name="check" size={16} className="text-[var(--coral)] ms-auto" />}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Dates — extend to add days, shrink to remove */}

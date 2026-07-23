@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams, useNavigate 
 import { useStore } from './store/useStore'
 import { cloudSignIn, cloudStop } from './lib/cloud'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { paletteVars } from './lib/palettes'
 import { TripBottomNav } from './components/BottomNav'
 import { Toast } from './components/Toast'
 import { Welcome } from './screens/Welcome'
@@ -43,8 +44,9 @@ function TripLayout() {
   const { tripId } = useParams()
   const trip = useStore((s) => s.trips.find((t) => t.id === tripId))
   if (!trip) return <Navigate to="/trips" replace />
+  // The trip's chosen palette themes only its own screens (empty for default).
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col" style={paletteVars(trip.paletteId)}>
       <div className="flex-1">
         <Outlet />
       </div>
