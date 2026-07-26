@@ -307,7 +307,7 @@ body {
   border-radius: 999px;
   background: rgba(255, 255, 255, .88);
   color: var(--ink);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
   backdrop-filter: blur(7px);
 }
@@ -327,7 +327,8 @@ body {
   border-radius: 10px;
 }
 .progress-pill {
-  font-size: 11px;
+  font-size: 14px;
+  font-weight: 700;
   background: rgba(255, 255, 255, .18);
   border: 1px solid rgba(255, 255, 255, .28);
   padding: 6px 10px;
@@ -397,7 +398,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 /* Tab strip (ink active). */
@@ -415,7 +417,8 @@ body {
   background: var(--paper);
   border-radius: 14px;
   padding: 9px 14px;
-  font-size: 12px;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--ink);
 }
 .tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
@@ -435,8 +438,8 @@ body {
   white-space: normal;
   text-align: center;
 }
-.tab-day .tab-day-word { font-size: 11px; }
-.tab-day .tab-day-date { font-size: 12px; font-weight: 800; }
+.tab-day .tab-day-word { font-size: 13px; font-weight: 700; }
+.tab-day .tab-day-date { font-size: 15px; font-weight: 800; }
 
 /* Trip-card cover image (grid card). */
 .trip-cover {
@@ -467,8 +470,8 @@ body {
   justify-content: center;
   gap: 7px;
   align-items: center;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 /* Equipment checklist. */
@@ -498,14 +501,14 @@ body {
   background: #f3fbfc;
   border-radius: 50%;
 }
-.ring strong { position: relative; font-size: 14px; }
+.ring strong { position: relative; font-size: 15px; font-weight: 800; }
 .check-item {
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 11px 8px;
   border-bottom: 1px solid var(--line);
-  font-size: 14px;
+  font-size: 16px; /* מיושר לטקסט הגוף — היה 14px וקטן מדי בטלפון */
 }
 .checkbox {
   width: 22px;
@@ -519,11 +522,14 @@ body {
   background: var(--paper);
 }
 .check-item.done .checkbox { background: var(--success); border-color: var(--success); }
+/* פריטי הציוד — 16px מודגש, כדי שיהיו קריאים בטלפון (משוב Galli). */
+.check-label { font-weight: 700; }
 .check-item.done .check-label { color: #a2a7b3; text-decoration: line-through; }
 .owner {
   margin-inline-start: auto;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 14px;
+  font-weight: 600;
   background: var(--canvas);
   padding: 4px 9px;
   border-radius: 999px;

@@ -50,7 +50,7 @@ function NavItem({
       }
     >
       <Icon name={icon} size={22} />
-      <span className="text-[10px] font-semibold">{t(labelKey)}</span>
+      <span className="text-sm font-bold">{t(labelKey)}</span>
     </NavLink>
   )
 }

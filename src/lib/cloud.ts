@@ -380,6 +380,59 @@ function isPermissionDenied(err: unknown): boolean {
   return /permission[-\s]denied|insufficient permissions/i.test(String(err))
 }
 
+/** A member identity recovered from the cloud by phone (never carries phone/email). */
+export interface RemoteIdentity {
+  id: string
+  name: string
+  role: Member['role']
+  figure: Member['figure']
+  color: string
+}
+
+/**
+ * Look up "does this phone already have a profile in the cloud?" — BEFORE the
+ * app asks a newcomer to pick a name and avatar.
+ *
+ * Without this, signing in on a second device always looked like a brand-new
+ * person: the local store has no members yet, so the app sent you to the
+ * "מטייל/ת חדש/ה" screen and only discovered your real identity afterwards.
+ * Running the lookup first means an existing phone lands straight on their
+ * trips, with their own name and avatar intact.
+ *
+ * Signs in anonymously (required before any Firestore read) and matches on
+ * `phoneHash`, so the plaintext number is still never uploaded. Returns null in
+ * local mode, when offline, or when the phone is genuinely new.
+ */
+export async function cloudFindMemberByPhone(rawPhone: string): Promise<RemoteIdentity | null> {
+  if (!isCloudEnabled) return null
+  const sdkPromise = getCloudSdk()
+  if (!sdkPromise) return null
+  if (normalizePhone(rawPhone) === '') return null
+  try {
+    const { auth, authApi, db, fs } = await sdkPromise
+    const credential = await authApi.signInAnonymously(auth)
+    myUid = credential.user.uid
+
+    const found = await fs.getDocs(
+      fs.query(fs.collection(db, 'members'), fs.where('phoneHash', '==', phoneHash(rawPhone))),
+    )
+    const remote = found.docs[0]
+    if (!remote) return null
+    const data = (remote.data() ?? {}) as Partial<Member>
+    return {
+      id: remote.id,
+      name: data.name ?? '',
+      role: (data.role ?? 'מבוגר') as Member['role'],
+      figure: (data.figure ?? 'person') as Member['figure'],
+      color: data.color ?? 'linear-gradient(145deg,#42b8d4,#67d3bd)',
+    }
+  } catch (err) {
+    // Never block sign-in on a cloud hiccup — fall back to the newcomer flow.
+    if (import.meta.env.DEV) console.warn('[TripTales identity]', err)
+    return null
+  }
+}
+
 /** Result of a manual "restore my trips" tap (see Dashboard empty state). */
 export type CloudRestoreResult =
   | { ok: true; indexed: number; restored: number }

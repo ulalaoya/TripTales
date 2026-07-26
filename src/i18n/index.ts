@@ -226,6 +226,7 @@ export const STRINGS = {
     restoreOffline: 'אין כרגע חיבור לענן — נסי שוב בעוד רגע.',
     restoreDenied: 'השחזור נחסם על ידי חוקי האבטחה. צריך לפרסם מחדש את חוקי ה-Firestore ואז לנסות שוב.',
     versionLabel: 'גרסה',
+    checkingIdentity: 'מאתר את הפרופיל שלך…',
     // ----- photo delete (Item 3) -----
     deletePhoto: 'מחיקת התמונה',
     deletePhotoConfirm: 'למחוק את התמונה? הפעולה אינה הפיכה.',
@@ -460,6 +461,7 @@ export const STRINGS = {
     restoreOffline: 'No cloud connection right now — try again in a moment.',
     restoreDenied: 'Restore was blocked by the security rules. Re-publish the Firestore rules, then try again.',
     versionLabel: 'Version',
+    checkingIdentity: 'Finding your profile…',
     // ----- photo delete (Item 3) -----
     deletePhoto: 'Delete photo',
     deletePhotoConfirm: 'Delete this photo? This cannot be undone.',

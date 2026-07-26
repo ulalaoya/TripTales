@@ -4,6 +4,7 @@ import { useStore } from '../store/useStore'
 import { useT } from '../i18n/useT'
 import { isValidIsraeliPhone, normalizePhone } from '../lib/phone'
 import { sendOtpStub } from '../lib/firebaseAuth'
+import { cloudFindMemberByPhone } from '../lib/cloud'
 import { Logo } from '../components/Logo'
 import { LangToggle } from '../components/LangToggle'
 import { Avatar } from '../components/Avatar'
@@ -19,12 +20,15 @@ const DECOR: { figure: any; color: string }[] = [
 export function Welcome() {
   const t = useT()
   const login = useStore((s) => s.login)
+  const adoptRemoteIdentity = useStore((s) => s.adoptRemoteIdentity)
   const navigate = useNavigate()
   const [phone, setPhone] = useState('')
   const [error, setError] = useState(false)
+  const [checking, setChecking] = useState(false)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (checking) return
     if (!isValidIsraeliPhone(phone)) {
       setError(true)
       return
@@ -35,9 +39,25 @@ export function Welcome() {
     const res = login(phone)
     if (res.kind === 'known') {
       navigate('/trips')
-    } else {
-      navigate('/join', { state: { phone: res.phone } })
+      return
     }
+
+    // Unknown on THIS device — but this may simply be a new device belonging to
+    // someone who already exists in the cloud. Ask the cloud BEFORE sending them
+    // through the "new traveller" name/avatar screen, so an existing person is
+    // recognised by their phone and lands straight on their own trips.
+    setChecking(true)
+    try {
+      const remote = await cloudFindMemberByPhone(phone)
+      if (remote) {
+        adoptRemoteIdentity(remote, phone)
+        navigate('/trips')
+        return
+      }
+    } finally {
+      setChecking(false)
+    }
+    navigate('/join', { state: { phone: res.phone } })
   }
 
   return (
@@ -82,8 +102,8 @@ export function Welcome() {
             <div id="phone-err" aria-live="polite" className="min-h-[1.25rem] text-sm text-[var(--danger)]">
               {error ? t('phoneError') : ''}
             </div>
-            <button type="submit" className="primary-btn tap w-full py-3 text-lg">
-              {t('login')}
+            <button type="submit" disabled={checking} className="primary-btn tap w-full py-3 text-lg disabled:opacity-70">
+              {checking ? t('checkingIdentity') : t('login')}
             </button>
           </form>
         </div>

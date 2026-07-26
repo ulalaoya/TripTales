@@ -51,7 +51,7 @@ export function Checklist() {
         <div className="check-head mb-4">
           <div>
             <h3 className="font-display text-2xl">{t('almostReady')}</h3>
-            <p className="text-xs text-[var(--muted)] mt-1">{t.fn('packedCount')(done, total)}</p>
+            <p className="text-sm font-bold text-[var(--muted)] mt-1">{t.fn('packedCount')(done, total)}</p>
           </div>
           <div
             className="ring"

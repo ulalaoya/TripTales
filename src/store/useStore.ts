@@ -77,6 +77,15 @@ interface State {
   setActiveDay: (tripId: string, dayId: string) => void
 
   login: (rawPhone: string) => LoginResult
+  /**
+   * Sign in as an identity recovered from the cloud by phone number (a NEW
+   * DEVICE for an existing person), so the newcomer name/avatar screen is
+   * skipped entirely. See `lib/cloud.cloudFindMemberByPhone`.
+   */
+  adoptRemoteIdentity: (
+    identity: Pick<Member, 'id' | 'name' | 'role' | 'figure' | 'color'>,
+    phone: string,
+  ) => void
   registerMember: (m: Omit<Member, 'id'>) => Member
   /** Create a member WITHOUT logging them in (used by the trip wizard). */
   addMember: (m: Omit<Member, 'id'>) => Member
@@ -243,6 +252,21 @@ export const useStore = create<State>()(
         }
         return { kind: 'unknown', phone }
       },
+
+      adoptRemoteIdentity: (identity, rawPhone) =>
+        set((s) => {
+          const phone = normalizePhone(rawPhone)
+          const existing = s.members.find((m) => m.id === identity.id)
+          // The phone stays device-local (it is never in the cloud document).
+          const member: Member = existing ? { ...existing, ...identity, phone } : { ...identity, phone }
+          return {
+            members: existing
+              ? s.members.map((m) => (m.id === identity.id ? member : m))
+              : [...s.members, member],
+            currentUserId: identity.id,
+            trips: withSelfInSeedTrips(s.trips, identity.id),
+          }
+        }),
 
       registerMember: (m) => {
         const member: Member = { ...m, id: uid('m') }
