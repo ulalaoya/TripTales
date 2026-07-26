@@ -46,6 +46,12 @@ export interface Photo {
   mood?: string
   /** Optional list of member ids tagged as "who was there". */
   people?: string[]
+  /**
+   * True for a photo added from the trip's Settings rather than from a specific
+   * day. It is still STORED on the first day (photos live inside days), but the
+   * album groups it under "כללי" instead of pretending it belongs to that date.
+   */
+  general?: boolean
   /** Cloud only: last-write-wins stamp (ms). Absent in pure local mode. */
   updatedAt?: number
 }

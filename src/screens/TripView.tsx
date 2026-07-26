@@ -32,6 +32,9 @@ import { TripHeader } from '../components/TripHeader'
 
 const ACTIVITY_ICONS = ['🍽️', '🏖️', '🏔️', '🎡', '🚗', '✈️', '⛵', '🏨', '🛍️', '☕', '🎫', '📸']
 
+/** Minimum horizontal travel (px) that counts as a day-changing swipe. */
+const SWIPE_MIN_PX = 60
+
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
@@ -54,6 +57,8 @@ export function TripView() {
   const setActiveDay = useStore((s) => s.setActiveDay)
 
   const [dayIdx, setDayIdx] = useState(0)
+  /** Start point of an in-progress horizontal swipe (see onTouchStart/End). */
+  const swipeRef = useRef<{ x: number; y: number } | null>(null)
 
   // Reorder only on a deliberate LONG-PRESS (Galli feedback — Item 2). With a
   // delay + tolerance activation, a quick swipe over the list scrolls normally
@@ -109,13 +114,43 @@ export function TripView() {
     if (from >= 0 && to >= 0 && from !== to) reorderActivity(trip!.id, day.id, from, to)
   }
 
+  /**
+   * Swipe left/right to move between days (Galli feedback).
+   *
+   * The day strip is RTL — day 1 sits on the RIGHT — so a swipe LEFT advances to
+   * the next day and a swipe RIGHT goes back, matching the visual order. Swipes
+   * that start inside the scrollable tab strip are ignored (that gesture scrolls
+   * the strip), as are mostly-vertical drags, so normal scrolling is untouched.
+   */
+  function onTouchStart(e: React.TouchEvent) {
+    if ((e.target as HTMLElement).closest?.('.tabs')) {
+      swipeRef.current = null
+      return
+    }
+    const p = e.touches[0]
+    swipeRef.current = { x: p.clientX, y: p.clientY }
+  }
+
+  function onTouchEnd(e: React.TouchEvent) {
+    const start = swipeRef.current
+    swipeRef.current = null
+    if (!start || !trip) return
+    const p = e.changedTouches[0]
+    const dx = p.clientX - start.x
+    const dy = p.clientY - start.y
+    if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.5) return
+    const step = dx < 0 ? 1 : -1
+    const last = trip.days.length - 1
+    setDayIdx((i) => Math.max(0, Math.min(last, Math.min(i, last) + step)))
+  }
+
   /** Photos of this day the viewer may see: approved, own pending, or all for parents. */
   const visiblePhotos: Photo[] = day
     ? day.photos.filter((p) => p.status === 'approved' || canPlan || p.by === member.id)
     : []
 
   return (
-    <div className="paper min-h-full">
+    <div className="paper min-h-full" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="max-w-column mx-auto px-5 py-5">
         <TripHeader
           trip={trip}
@@ -179,7 +214,8 @@ export function TripView() {
         </DndContext>
 
         {/* Add activity — parents of the trip */}
-        {canPlan && <ActivityForm t={t} onSubmit={(a) => addActivity(trip.id, day.id, a)} />}
+        {/* Keyed by day so an open draft never follows you to another day. */}
+        {canPlan && <ActivityForm key={day.id} t={t} onSubmit={(a) => addActivity(trip.id, day.id, a)} />}
 
         {/* ===== This day's photos ===== */}
         <section className="mt-8">
@@ -547,6 +583,30 @@ function ActivityForm({
   const [attachment, setAttachment] = useState<ActivityAttachment | undefined>(initial?.attachment)
   const [open, setOpen] = useState(!!initial)
 
+  /** Reset every field back to empty (shared by cancel and by a fresh add). */
+  function reset() {
+    setTitle('')
+    setTime('')
+    setIcon('')
+    setLoc('')
+    setNotes('')
+    setAttachment(undefined)
+  }
+
+  /**
+   * Close without saving. When editing, hand back to the caller; when ADDING,
+   * clear the draft and collapse back to the "הוספת פעילות" button — previously
+   * an opened add-form had no way out at all (Galli feedback).
+   */
+  function cancel() {
+    if (onCancel) {
+      onCancel()
+      return
+    }
+    reset()
+    setOpen(false)
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
@@ -559,12 +619,7 @@ function ActivityForm({
       attachment,
     })
     if (!initial) {
-      setTitle('')
-      setTime('')
-      setIcon('')
-      setLoc('')
-      setNotes('')
-      setAttachment(undefined)
+      reset()
       setOpen(false)
     }
   }
@@ -580,6 +635,13 @@ function ActivityForm({
 
   return (
     <form onSubmit={submit} className={`space-y-3 ${initial ? '' : 'journal-lined p-4 mt-3'}`}>
+      {/* Always-available way out of the composer. */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-display text-lg">{initial ? t('editActivity') : t('addActivity')}</span>
+        <button type="button" onClick={cancel} aria-label={t('cancel')} className="tap p-1.5 text-[var(--muted)]">
+          <Icon name="close" size={20} />
+        </button>
+      </div>
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
@@ -633,15 +695,13 @@ function ActivityForm({
         <button type="submit" className="primary-btn tap px-4 text-sm">
           {t('save')}
         </button>
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="tap px-4 rounded-[14px] border border-[var(--line)] bg-white text-sm"
-          >
-            {t('cancel')}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={cancel}
+          className="tap px-4 rounded-[14px] border border-[var(--line)] bg-white text-sm"
+        >
+          {t('cancel')}
+        </button>
       </div>
     </form>
   )

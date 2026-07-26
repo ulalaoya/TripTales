@@ -31,6 +31,7 @@ export function TripSettings({ trip }: { trip: Trip }) {
   const [start, setStart] = useState(trip.startDate)
   const [end, setEnd] = useState(trip.endDate)
   const [confirm, setConfirm] = useState<number | null>(null)
+  const [coverOpen, setCoverOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Every approved photo across the trip's album — the cover candidates.
@@ -57,7 +58,13 @@ export function TripSettings({ trip }: { trip: Trip }) {
     reader.onload = () => {
       const raw = String(reader.result)
       const store = (dataUrl: string) => {
-        const status = addPhoto(trip.id, firstDay.id, { src: dataUrl, caption: '', by: member.id }, member.role)
+        // `general: true` → shown under "כללי" in the album, not under day 1.
+        const status = addPhoto(
+          trip.id,
+          firstDay.id,
+          { src: dataUrl, caption: '', by: member.id, general: true },
+          member.role,
+        )
         showToast(status === 'pending' ? t('sentForApproval') : t('momentSaved'))
       }
       if (isCloudEnabled) compressDataUrl(raw).then(store).catch(() => store(raw))
@@ -145,13 +152,33 @@ export function TripSettings({ trip }: { trip: Trip }) {
         </button>
       </div>
 
-      {/* Cover photo picker */}
+      {/* Cover photo picker — collapsed behind a toggle so a trip with dozens of
+          photos does not flood the settings screen (Galli feedback). */}
       <div>
         <span className="block text-xs font-medium mb-1">{t('coverPhotoLabel')}</span>
         {approved.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">{t('noApprovedPhotos')}</p>
         ) : (
-          <div className="grid grid-cols-4 gap-2">
+          <>
+            <button
+              type="button"
+              onClick={() => setCoverOpen((o) => !o)}
+              aria-expanded={coverOpen}
+              className="secondary-btn tap w-full inline-flex items-center justify-between gap-2 py-2.5 px-3 text-sm"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Icon name="album" size={18} />
+                {t('chooseCover')}
+                <span className="text-[var(--muted)]">({approved.length})</span>
+              </span>
+              <Icon
+                name="chevron"
+                size={16}
+                style={{ transform: `rotate(${coverOpen ? -90 : 90}deg)` }}
+              />
+            </button>
+            {coverOpen && (
+          <div className="grid grid-cols-4 gap-2 mt-2">
             <button
               type="button"
               onClick={() => saveInfo({ coverPhotoId: undefined })}
@@ -182,9 +209,11 @@ export function TripSettings({ trip }: { trip: Trip }) {
                     <img src={p.src} alt={p.caption} style={{ display: 'block', width: '100%', height: 56, objectFit: 'cover' }} />
                   )}
                 </button>
-              )
-            })}
-          </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
 

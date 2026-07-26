@@ -50,8 +50,37 @@ export function Album() {
 
         {tab === 'day' ? (
           <div className="space-y-6">
+            {/* "כללי" — photos added from the trip's Settings. They are stored on
+                day 1 (photos live inside days) but do not belong to that date, so
+                they get their own group instead of appearing under it. */}
+            {(() => {
+              const general: { photo: Photo; dayId: string }[] = []
+              for (const d of trip.days) {
+                for (const p of d.photos) if (p.general && visible(p)) general.push({ photo: p, dayId: d.id })
+              }
+              if (general.length === 0) return null
+              return (
+                <section>
+                  <h2 className="font-display text-2xl mb-2">{t('generalPhotos')}</h2>
+                  <div className="grid grid-cols-2 gap-4">
+                    {general.map(({ photo, dayId }) => (
+                      <PhotoTile
+                        key={photo.id}
+                        photo={photo}
+                        tripId={trip.id}
+                        dayId={dayId}
+                        isParent={isParent}
+                        member={member}
+                        author={findMember(photo.by)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )
+            })()}
+
             {trip.days.map((d) => {
-              const photos = d.photos.filter(visible)
+              const photos = d.photos.filter((p) => visible(p) && !p.general)
               if (photos.length === 0) return null
               return (
                 <section key={d.id}>
