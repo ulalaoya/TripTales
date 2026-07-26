@@ -8,6 +8,7 @@ import { isCloudEnabled } from '../lib/firebase'
 import { compressDataUrl } from '../lib/compressImage'
 import type { Trip, Photo, Transport } from '../types'
 import { Icon } from './Icon'
+import { ThemeToggle } from './ThemeToggle'
 
 /**
  * Trip metadata editor — name, transport icon, cover photo and dates.
@@ -25,7 +26,11 @@ export function TripSettings({ trip }: { trip: Trip }) {
   const showToast = useStore((s) => s.showToast)
   const lang = useStore((s) => s.lang)
   const member = useCurrentMember()
-  const activePalette = trip.paletteId ?? 'coral'
+  // The palette and the colour scheme are APP-WIDE settings (Galli feedback),
+  // edited from here but never stored on the trip.
+  const activePalette = useStore((s) => s.paletteId)
+  const setPaletteId = useStore((s) => s.setPaletteId)
+  const theme = useStore((s) => s.theme)
 
   const [name, setName] = useState(trip.name)
   const [start, setStart] = useState(trip.startDate)
@@ -217,9 +222,21 @@ export function TripSettings({ trip }: { trip: Trip }) {
         )}
       </div>
 
-      {/* Colour palette — themes this trip's screens (default = Coral Journey) */}
+      {/* Day / night mode — also reachable here, not only from the home header. */}
       <div>
-        <span className="block text-xs font-medium mb-1">{t('paletteLabel')}</span>
+        <span className="block text-xs font-medium mb-1">{t('appearance')}</span>
+        <div className="flex items-center justify-between rounded-[14px] border border-[var(--line)] bg-white px-3 py-2">
+          <span className="text-sm font-bold text-[var(--ink)]">
+            {theme === 'dark' ? t('darkMode') : t('lightMode')}
+          </span>
+          <ThemeToggle />
+        </div>
+      </div>
+
+      {/* Colour palette — applies to the WHOLE app, not just this trip. */}
+      <div>
+        <span className="block text-xs font-medium">{t('paletteLabel')}</span>
+        <p className="text-xs text-[var(--muted)] mb-1.5">{t('paletteAppWide')}</p>
         <div className="space-y-2" role="radiogroup" aria-label={t('paletteLabel')}>
           {PALETTES.map((p) => {
             const chosen = activePalette === p.id
@@ -229,7 +246,10 @@ export function TripSettings({ trip }: { trip: Trip }) {
                 type="button"
                 role="radio"
                 aria-checked={chosen}
-                onClick={() => saveInfo({ paletteId: p.id })}
+                onClick={() => {
+                  setPaletteId(p.id)
+                  showToast(t('tripInfoSaved'))
+                }}
                 className={`tap w-full flex items-center gap-2 rounded-[14px] border p-2 bg-white ${
                   chosen ? 'border-[var(--coral)] ring-2 ring-[var(--coral)]' : 'border-[var(--line)]'
                 }`}

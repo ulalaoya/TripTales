@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams, useNavigate 
 import { useStore } from './store/useStore'
 import { cloudSignIn, cloudStop } from './lib/cloud'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { paletteVars } from './lib/palettes'
+import { paletteVars, PALETTE_VAR_NAMES } from './lib/palettes'
 import { TripBottomNav } from './components/BottomNav'
 import { Toast } from './components/Toast'
 import { Welcome } from './screens/Welcome'
@@ -32,6 +32,25 @@ function useHtmlDir() {
   }, [theme])
 }
 
+/**
+ * Apply the app-wide palette to `<html>` (Galli feedback: one palette for the
+ * WHOLE app, not per trip). Setting it on the root element — rather than on a
+ * per-screen wrapper — means it also reaches `body`, the welcome/login screens
+ * and every future screen for free.
+ */
+function useAppPalette() {
+  const paletteId = useStore((s) => s.paletteId)
+  const dark = useStore((s) => s.theme) === 'dark'
+  useEffect(() => {
+    const el = document.documentElement
+    // Clear the previous palette first, or switching back to the default would
+    // leave its custom properties behind.
+    for (const name of PALETTE_VAR_NAMES) el.style.removeProperty(name)
+    const vars = paletteVars(paletteId, dark) as Record<string, string>
+    for (const [name, value] of Object.entries(vars)) el.style.setProperty(name, value)
+  }, [paletteId, dark])
+}
+
 /** Outer phone-frame column shared by every authenticated screen. */
 function Frame() {
   return (
@@ -48,11 +67,10 @@ function Frame() {
 function TripLayout() {
   const { tripId } = useParams()
   const trip = useStore((s) => s.trips.find((t) => t.id === tripId))
-  const dark = useStore((s) => s.theme) === 'dark'
   if (!trip) return <Navigate to="/trips" replace />
-  // The trip's chosen palette themes its screens, in whichever colour scheme.
+  // The palette is applied app-wide on <html> (see `useAppPalette`).
   return (
-    <div className="flex-1 flex flex-col" style={paletteVars(trip.paletteId, dark)}>
+    <div className="flex-1 flex flex-col">
       <div className="flex-1">
         <Outlet />
       </div>
@@ -123,6 +141,7 @@ function AppRoutes() {
 
 export default function App() {
   useHtmlDir()
+  useAppPalette()
   const currentUserId = useStore((s) => s.currentUserId)
   const hasHydrated = useStore((s) => s.hasHydrated)
   useCloudSession(currentUserId)

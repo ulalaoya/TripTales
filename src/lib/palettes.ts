@@ -80,6 +80,24 @@ export const PALETTES: Palette[] = [
   },
 ]
 
+/**
+ * Every custom property a palette can set. Needed so the app can CLEAR a
+ * previous palette from `<html>` before applying the next one — otherwise
+ * switching back to the default would leave the old values behind.
+ */
+export const PALETTE_VAR_NAMES = [
+  '--coral',
+  '--coral-2',
+  '--coral-soft',
+  '--sea',
+  '--sea-soft',
+  '--sun',
+  '--lilac',
+  '--canvas',
+  '--line',
+  '--ink',
+] as const
+
 const BY_ID = new Map(PALETTES.map((p) => [p.id, p]))
 
 /** '#rgb' | '#rrggbb' → [r, g, b], or null when unparseable. */

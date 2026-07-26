@@ -232,6 +232,8 @@ export const STRINGS = {
     checkingIdentity: 'מאתר את הפרופיל שלך…',
     darkMode: 'מצב לילה',
     lightMode: 'מצב יום',
+    appearance: 'תצוגה',
+    paletteAppWide: 'חלה על כל האפליקציה ועל כל הטיולים',
     backToTrips: 'חזרה לכל הטיולים',
     // ----- photo delete (Item 3) -----
     deletePhoto: 'מחיקת התמונה',
@@ -473,6 +475,8 @@ export const STRINGS = {
     checkingIdentity: 'Finding your profile…',
     darkMode: 'Night mode',
     lightMode: 'Day mode',
+    appearance: 'Appearance',
+    paletteAppWide: 'Applies to the whole app and all trips',
     backToTrips: 'Back to all trips',
     // ----- photo delete (Item 3) -----
     deletePhoto: 'Delete photo',

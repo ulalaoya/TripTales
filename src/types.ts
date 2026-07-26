@@ -156,8 +156,10 @@ export interface Trip {
    */
   coverPhotoId?: string
   /**
-   * Colour palette applied inside this trip's screens (see `lib/palettes`).
-   * Absent or `'coral'` = the default "Coral Journey" theme.
+   * @deprecated The palette is an APP-WIDE setting now (`useStore().paletteId`),
+   * chosen from any trip's Settings but applied everywhere. Kept so persisted
+   * and cloud trips still type-check; the store's v5→v6 migration lifts any
+   * value found here into the global setting. Nothing reads it for theming.
    */
   paletteId?: string
   /** Equipment / packing checklist groups. */

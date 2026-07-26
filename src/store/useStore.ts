@@ -53,6 +53,12 @@ export type Theme = 'light' | 'dark'
 interface State {
   lang: Lang
   theme: Theme
+  /**
+   * The app-wide colour palette (see `lib/palettes`). Chosen from any trip's
+   * Settings but applied everywhere — trips, home and the login screens
+   * (Galli feedback: one palette for the whole app, not one per trip).
+   */
+  paletteId: string
   members: Member[]
   trips: Trip[]
   currentUserId: string | null
@@ -78,6 +84,8 @@ interface State {
   setLang: (lang: Lang) => void
   /** Flip between day and night mode. */
   toggleTheme: () => void
+  /** Choose the app-wide colour palette. */
+  setPaletteId: (paletteId: string) => void
   showToast: (msg: string) => void
   clearToast: () => void
   /** Remember which day of a trip the planner is currently showing. */
@@ -235,6 +243,7 @@ export const useStore = create<State>()(
     (set, get) => ({
       lang: 'he',
       theme: 'light',
+      paletteId: 'coral',
       members: SEED_MEMBERS,
       trips: SEED_TRIPS,
       currentUserId: null,
@@ -247,6 +256,7 @@ export const useStore = create<State>()(
 
       setLang: (lang) => set({ lang }),
       toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
+      setPaletteId: (paletteId) => set({ paletteId }),
       showToast: (msg) => set({ toast: msg }),
       clearToast: () => set({ toast: null }),
       setActiveDay: (tripId, dayId) =>
@@ -658,7 +668,7 @@ export const useStore = create<State>()(
     }),
     {
       name: 'triptales-store',
-      version: 5,
+      version: 6,
       // IndexedDB, not localStorage: photos (base64) blow localStorage's ~5 MB
       // quota, and its synchronous `setItem` threw QuotaExceededError mid-render.
       // `idbStorage` also migrates any existing localStorage data on first read.
@@ -669,6 +679,7 @@ export const useStore = create<State>()(
       partialize: (s) => ({
         lang: s.lang,
         theme: s.theme,
+        paletteId: s.paletteId,
         members: s.members,
         trips: s.trips,
         currentUserId: s.currentUserId,
@@ -712,6 +723,13 @@ export const useStore = create<State>()(
           // Remove ONLY the fixed Santorini demo id; user trips carry generated
           // ids (`t-<base36>-<n>`) and can never match this literal.
           state.trips = state.trips.filter((t) => t.id !== 't-flight')
+        }
+        if (version < 6) {
+          // The palette became APP-WIDE. Lift whatever a trip already carried
+          // into the global setting so an existing choice is never lost.
+          const s = state as { trips?: Trip[]; paletteId?: string }
+          const chosen = (s.trips ?? []).find((t) => t.paletteId && t.paletteId !== 'coral')?.paletteId
+          if (!s.paletteId && chosen) s.paletteId = chosen
         }
         return state as never
       },
