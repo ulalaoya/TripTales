@@ -70,6 +70,9 @@ let flushing = false
 let flushAgain = false
 let warnedTooBig = false
 
+/** Trip ids we have already added to this member's `memberTrips` index this session. */
+const indexedTripIds = new Set<string>()
+
 /** tripId → signature of the trip document we last wrote (or last received). */
 const tripSignatures = new Map<string, string>()
 /** `${tripId}/${photoId}` → signature of the photo doc we last wrote/received. */
@@ -83,7 +86,7 @@ const remotePhotos = new Map<string, Map<string, PhotoDoc>>()
 // Small helpers
 // ---------------------------------------------------------------------------
 
-function str(key: 'syncFailed' | 'syncPhotoTooBig'): string {
+function str(key: 'syncFailed' | 'syncPhotoTooBig' | 'restoringTrips'): string {
   return STRINGS[useStore.getState().lang][key]
 }
 
@@ -173,6 +176,10 @@ export async function cloudSignIn(): Promise<void> {
     await claimMemberDoc(db, fs)
     subscribeMembers(db, fs)
     subscribeTrips(db, fs)
+    // Cross-device restore: re-join every trip on this member's cloud index so a
+    // fresh device (new anonymous uid) recovers all their trips automatically —
+    // the "automatic by phone" model (see restoreMyTrips + firestore.rules).
+    await restoreMyTrips(db, fs)
     watchLocalChanges()
 
     // First push = the migration. `myTrips()` excludes `t-flight`, so the
@@ -207,6 +214,7 @@ export function cloudStop(): void {
   remotePhotos.clear()
   tripSignatures.clear()
   photoSignatures.clear()
+  indexedTripIds.clear()
   if (unwatchStore) unwatchStore()
   unwatchStore = null
   if (pushTimer) clearTimeout(pushTimer)
@@ -268,6 +276,93 @@ async function claimMemberDoc(database: Db, fs: FsApi): Promise<void> {
     { merge: true },
   )
   useStore.getState().setMemberUid(memberId, myUid)
+}
+
+// ---------------------------------------------------------------------------
+// Cross-device restore ("automatic by phone")
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-member private index of the trips that member belongs to:
+ *
+ *     memberTrips/{memberId}  →  { tripIds: string[] }
+ *
+ * It is maintained whenever this device creates or joins a trip, and read on a
+ * fresh device to re-join them all. Reading/writing it requires OWNING
+ * members/{memberId} (uid == me) — see firestore.rules. Adds are idempotent and
+ * de-duplicated per session via `indexedTripIds`.
+ */
+async function indexTripForMember(db: Db, fs: FsApi, memberId: string, tripId: string): Promise<void> {
+  if (indexedTripIds.has(tripId)) return
+  try {
+    await fs.setDoc(fs.doc(db, 'memberTrips', memberId), { tripIds: fs.arrayUnion(tripId) }, { merge: true })
+    indexedTripIds.add(tripId)
+  } catch (err) {
+    reportFailure(err, false)
+  }
+}
+
+/** Drop a trip from this member's index when they LEAVE it (delete = leave). */
+async function unindexTripForMember(db: Db, fs: FsApi, memberId: string, tripId: string): Promise<void> {
+  indexedTripIds.delete(tripId)
+  try {
+    await fs.setDoc(fs.doc(db, 'memberTrips', memberId), { tripIds: fs.arrayRemove(tripId) }, { merge: true })
+  } catch (err) {
+    reportFailure(err, false)
+  }
+}
+
+/**
+ * Automatic cross-device restore (Galli's "automatic by phone" choice).
+ *
+ * `claimMemberDoc` has just recovered this human's stable member id and stamped
+ * our new uid on their member document. Now read their private trip index
+ * (memberTrips/{memberId}) and re-join every trip on it — one self-join per trip
+ * adds THIS device's uid to the trip's `memberUids`, so the normal
+ * `memberUids array-contains myUid` snapshot streams the trip (and its photos)
+ * down. No join codes required.
+ *
+ * SECURITY — the deliberate "phone number is the key" trade-off: reading
+ * memberTrips/{memberId} requires owning members/{memberId} (uid == me), and a
+ * member document is (re-)claimable by anyone who types the same phone number.
+ * That is the accepted, documented no-SMS model — see firestore.rules.
+ *
+ * Never throws: any failure just leaves the device with whatever it already had.
+ */
+async function restoreMyTrips(db: Db, fs: FsApi): Promise<void> {
+  if (!myUid) return
+  const memberId = useStore.getState().currentUserId
+  if (!memberId) return
+
+  let tripIds: string[] = []
+  try {
+    const snap = await fs.getDoc(fs.doc(db, 'memberTrips', memberId))
+    if (!snap.exists()) return
+    const raw = (snap.data() as { tripIds?: unknown }).tripIds
+    tripIds = Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : []
+  } catch (err) {
+    reportFailure(err, false)
+    return
+  }
+
+  let restored = 0
+  for (const tripId of tripIds) {
+    indexedTripIds.add(tripId) // already indexed — don't rewrite it later this session
+    const existing = useStore.getState().trips.find((t) => t.id === tripId)
+    if (existing?.memberUids?.includes(myUid)) continue
+    try {
+      await fs.updateDoc(fs.doc(db, 'trips', tripId), {
+        memberUids: fs.arrayUnion(myUid),
+        members: fs.arrayUnion(memberId),
+        updatedAt: fs.serverTimestamp(),
+      })
+      restored++
+    } catch (err) {
+      // Trip since deleted, or rules declined — skip it, never break sign-in.
+      if (import.meta.env.DEV) console.warn('[TripTales restore]', tripId, err)
+    }
+  }
+  if (restored > 0) useStore.getState().showToast(str('restoringTrips'))
 }
 
 // ---------------------------------------------------------------------------
@@ -423,6 +518,8 @@ async function flushNow(): Promise<void> {
           memberUids: fs.arrayRemove(myUid),
           members: fs.arrayRemove(memberId),
         })
+        // Leaving a trip also drops it from my restore index.
+        await unindexTripForMember(db, fs, memberId, tripId)
       } catch (err) {
         reportFailure(err, false)
       }
@@ -516,7 +613,9 @@ async function pushTrip(
     }
   }
 
-  void memberId
+  // Record this trip in my private cross-device index so a fresh device can
+  // restore it automatically (idempotent + de-duped per session).
+  await indexTripForMember(db, fs, memberId, trip.id)
   return wrote
 }
 
@@ -571,6 +670,9 @@ export async function cloudJoinByCode(rawCode: string): Promise<CloudJoinResult>
       members: fs.arrayUnion(memberId),
       updatedAt: fs.serverTimestamp(),
     })
+
+    // Index the joined trip so it too restores automatically on a new device.
+    await indexTripForMember(db, fs, memberId, tripId)
 
     await waitForTrip(tripId)
     return { ok: true, tripId }

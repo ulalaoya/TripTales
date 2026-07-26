@@ -20,6 +20,17 @@ rules_version = '2';
 // same phone number — again by design, so a family member who reinstalls the
 // app or switches phone gets their identity back without an SMS round-trip.
 //
+// AUTOMATIC CROSS-DEVICE RESTORE — a second, knowingly-accepted consequence:
+//
+//   *** BECAUSE THE SAME PHONE NUMBER RE-CLAIMS A MEMBER, AND A MEMBER CARRIES ***
+//   *** A PRIVATE INDEX OF THEIR TRIPS (memberTrips), TYPING SOMEONE'S PHONE   ***
+//   *** NUMBER ON A NEW DEVICE RESTORES — AND THEREBY EXPOSES — ALL OF THEIR   ***
+//   *** TRIPS AND PHOTOS. THE PHONE NUMBER IS EFFECTIVELY THE KEY.             ***
+//
+// This is the product owner's explicit "automatic restore by phone" choice,
+// chosen over a secret personal restore code. Closing it is the SMS-verification
+// upgrade path (verify the number before honouring a re-claim / restore).
+//
 // Everything else is locked down: no unauthenticated access at all, and trip
 // content is readable only by uids listed in that trip's `memberUids`.
 //
@@ -170,6 +181,32 @@ service cloud.firestore {
       match /photos/{photoId} {
         allow read, write: if isTripMember(tripId);
       }
+    }
+
+    // -----------------------------------------------------------------------
+    // memberTrips/{memberId}  →  { tripIds: string[] }
+    //
+    // A member's PRIVATE index of the trips they belong to, used for automatic
+    // cross-device restore ("log in with the same phone on a new device and get
+    // all your trips back", Galli's approved choice). On a fresh device the app
+    // re-claims the member document (uid == me) and then reads this list to
+    // re-join each trip.
+    //
+    // Readable/writable ONLY by the uid that currently OWNS members/{memberId}.
+    // This is NOT world-readable on purpose: a dumpable member→trips map would
+    // let anyone self-join every trip in the database. Gating it behind member
+    // ownership keeps the exposure at exactly the accepted level — a member
+    // document is (re-)claimable by whoever types the same phone number, so this
+    // index inherits precisely the "phone number is the key" trade-off already
+    // documented at the top of this file, and grants no broader access.
+    // -----------------------------------------------------------------------
+    match /memberTrips/{memberId} {
+      function ownsMember() {
+        return isSignedIn()
+               && exists(/databases/$(database)/documents/members/$(memberId))
+               && get(/databases/$(database)/documents/members/$(memberId)).data.uid == me();
+      }
+      allow read, write: if ownsMember();
     }
 
     // -----------------------------------------------------------------------

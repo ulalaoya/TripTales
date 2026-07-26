@@ -218,6 +218,7 @@ export const STRINGS = {
     syncTitle: 'אין כרגע חיבור לענן. השינויים נשמרים במכשיר ויסתנכרנו אוטומטית כשהחיבור יחזור.',
     syncFailed: 'הסנכרון נכשל — השינויים נשמרו במכשיר',
     syncPhotoTooBig: 'התמונה גדולה מדי לסנכרון ונשמרה במכשיר בלבד',
+    restoringTrips: 'משחזר את הטיולים שלך מהענן…',
     // ----- photo delete (Item 3) -----
     deletePhoto: 'מחיקת התמונה',
     deletePhotoConfirm: 'למחוק את התמונה? הפעולה אינה הפיכה.',
@@ -444,6 +445,7 @@ export const STRINGS = {
     syncTitle: 'No cloud connection right now. Changes are saved on this device and will sync automatically when the connection returns.',
     syncFailed: 'Sync failed — your changes are saved on this device',
     syncPhotoTooBig: 'That photo is too large to sync and stayed on this device',
+    restoringTrips: 'Restoring your trips from the cloud…',
     // ----- photo delete (Item 3) -----
     deletePhoto: 'Delete photo',
     deletePhotoConfirm: 'Delete this photo? This cannot be undone.',
