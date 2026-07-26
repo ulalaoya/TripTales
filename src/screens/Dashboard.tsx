@@ -7,7 +7,9 @@ import { buildInviteText } from '../lib/invite'
 import { checklistProgress } from '../lib/checklist'
 import { coverPhotoOf } from '../lib/tripCover'
 import { tripStatus, statusLabel, statusTag, type TripStatus } from '../lib/tripStatus'
-import { todayISO } from '../lib/tripSelect'
+import { todayISO, primaryTrip } from '../lib/tripSelect'
+import { paletteVars } from '../lib/palettes'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { isValidJoinCodeFormat } from '../lib/joinCode'
 import type { Trip, Member } from '../types'
 import { Icon } from '../components/Icon'
@@ -44,6 +46,7 @@ export function Dashboard() {
   const [code, setCode] = useState('')
   const [joinErr, setJoinErr] = useState('')
   const [restoring, setRestoring] = useState(false)
+  const dark = useStore((s) => s.theme) === 'dark'
 
   /** Force the cross-device restore ("automatic by phone") with visible feedback. */
   async function onRestore() {
@@ -152,7 +155,11 @@ export function Dashboard() {
   }
 
   return (
-    <div className="paper min-h-full">
+    // The home screen wears the palette of the trip it is currently "about" —
+    // the active/nearest one (`primaryTrip`). Previously a chosen palette
+    // stopped at the trip's own screens and home stayed default, which read as
+    // the setting not working at all (Galli feedback).
+    <div className="paper min-h-full" style={paletteVars(primaryTrip(trips, today)?.paletteId, dark)}>
       <div className="max-w-column mx-auto px-5 py-5">
         {/* Header (Galli feedback — Item 6): brand mark + language on the LEFT
             (matching every in-trip screen), the user's avatar + name on the
@@ -172,6 +179,7 @@ export function Dashboard() {
           {/* The sync badge moved down to the footer (next to the build stamp) —
               up here it crowded the user's name (Galli feedback). */}
           <div className="flex items-center gap-2 shrink-0">
+            <ThemeToggle />
             <LangToggle />
             <Logo variant="emboss" size="sm" />
           </div>

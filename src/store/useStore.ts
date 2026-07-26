@@ -46,8 +46,12 @@ export type JoinResult =
  */
 export type RemoteMember = { id: string } & Partial<Omit<Member, 'id' | 'phone' | 'email'>>
 
+/** App colour scheme. Persisted, and applied as `<html data-theme>`. */
+export type Theme = 'light' | 'dark'
+
 interface State {
   lang: Lang
+  theme: Theme
   members: Member[]
   trips: Trip[]
   currentUserId: string | null
@@ -71,6 +75,8 @@ interface State {
   setHydrated: () => void
 
   setLang: (lang: Lang) => void
+  /** Flip between day and night mode. */
+  toggleTheme: () => void
   showToast: (msg: string) => void
   clearToast: () => void
   /** Remember which day of a trip the planner is currently showing. */
@@ -227,6 +233,7 @@ export const useStore = create<State>()(
   persist(
     (set, get) => ({
       lang: 'he',
+      theme: 'light',
       members: SEED_MEMBERS,
       trips: SEED_TRIPS,
       currentUserId: null,
@@ -238,6 +245,7 @@ export const useStore = create<State>()(
       setHydrated: () => set({ hasHydrated: true }),
 
       setLang: (lang) => set({ lang }),
+      toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
       showToast: (msg) => set({ toast: msg }),
       clearToast: () => set({ toast: null }),
       setActiveDay: (tripId, dayId) =>
@@ -655,6 +663,7 @@ export const useStore = create<State>()(
       },
       partialize: (s) => ({
         lang: s.lang,
+        theme: s.theme,
         members: s.members,
         trips: s.trips,
         currentUserId: s.currentUserId,

@@ -34,7 +34,7 @@ export function TripHeader({ trip, subtitle, action }: Props) {
           className="tap inline-flex items-center gap-1 text-[var(--ink)]"
         >
           <Icon name="chevron" size={18} className="dir-back" />
-          {t('back')}
+          {t('backToTrips')}
         </button>
         <Logo size="sm" />
       </div>

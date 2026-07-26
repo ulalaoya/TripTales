@@ -228,7 +228,7 @@ export function TripForm() {
                   aria-checked={transport === tr}
                   onClick={() => setTransport(tr)}
                   className={`tap inline-flex items-center gap-1 px-4 py-2 text-sm font-medium ${
-                    transport === tr ? 'bg-[var(--ink)] text-white' : 'text-[var(--ink)]'
+                    transport === tr ? 'bg-[var(--solid)] text-[var(--on-solid)]' : 'text-[var(--ink)]'
                   }`}
                 >
                   <Icon name={tr === 'flight' ? 'plane' : 'car'} size={18} directional />
@@ -290,7 +290,7 @@ export function TripForm() {
                       aria-pressed={dRelation === r}
                       className={`tap px-3 py-1.5 rounded-full text-sm border ${
                         dRelation === r
-                          ? 'bg-[var(--ink)] text-white border-transparent'
+                          ? 'bg-[var(--solid)] text-[var(--on-solid)] border-transparent'
                           : 'bg-white text-[var(--ink)] border-[var(--line)]'
                       }`}
                     >
@@ -319,7 +319,7 @@ export function TripForm() {
                       aria-checked={dRole === r}
                       onClick={() => setDRole(r)}
                       className={`tap px-5 py-2 text-sm font-medium ${
-                        dRole === r ? 'bg-[var(--ink)] text-white' : 'text-[var(--ink)]'
+                        dRole === r ? 'bg-[var(--solid)] text-[var(--on-solid)]' : 'text-[var(--ink)]'
                       }`}
                     >
                       {r === 'מבוגר' ? t('roleAdult') : t('roleChild')}

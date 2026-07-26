@@ -87,7 +87,7 @@ export function Profile() {
                     aria-checked={role === r}
                     onClick={() => setRole(r)}
                     className={`tap px-5 py-2 text-sm font-medium ${
-                      role === r ? 'bg-[var(--ink)] text-white' : 'text-[var(--ink)]'
+                      role === r ? 'bg-[var(--solid)] text-[var(--on-solid)]' : 'text-[var(--ink)]'
                     }`}
                   >
                     {r === 'מבוגר' ? t('roleAdult') : t('roleChild')}

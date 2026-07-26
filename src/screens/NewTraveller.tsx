@@ -82,7 +82,7 @@ export function NewTraveller() {
                   aria-pressed={relation === r}
                   className={`tap px-3 py-1.5 rounded-full text-sm border ${
                     relation === r
-                      ? 'bg-[var(--ink)] text-white border-transparent'
+                      ? 'bg-[var(--solid)] text-[var(--on-solid)] border-transparent'
                       : 'bg-white text-[var(--ink)] border-[var(--line)]'
                   }`}
                 >
@@ -124,7 +124,7 @@ export function NewTraveller() {
                   aria-checked={role === r}
                   onClick={() => setRole(r)}
                   className={`tap px-5 py-2 text-sm font-medium ${
-                    role === r ? 'bg-[var(--ink)] text-white' : 'bg-white text-[var(--ink)]'
+                    role === r ? 'bg-[var(--solid)] text-[var(--on-solid)]' : 'bg-white text-[var(--ink)]'
                   }`}
                 >
                   {r === 'מבוגר' ? t('roleAdult') : t('roleChild')}

@@ -17,14 +17,19 @@ import { Moment } from './screens/Moment'
 import { People } from './screens/People'
 import { Profile } from './screens/Profile'
 
-/** Sync <html dir/lang> with the current language (live he<->en switch). */
+/** Sync <html dir/lang/data-theme> with the current language and colour scheme. */
 function useHtmlDir() {
   const lang = useStore((s) => s.lang)
+  const theme = useStore((s) => s.theme)
   useEffect(() => {
     const el = document.documentElement
     el.lang = lang
     el.dir = lang === 'he' ? 'rtl' : 'ltr'
   }, [lang])
+  useEffect(() => {
+    // Drives the `:root[data-theme='dark']` token block in index.css.
+    document.documentElement.dataset.theme = theme
+  }, [theme])
 }
 
 /** Outer phone-frame column shared by every authenticated screen. */
@@ -43,10 +48,11 @@ function Frame() {
 function TripLayout() {
   const { tripId } = useParams()
   const trip = useStore((s) => s.trips.find((t) => t.id === tripId))
+  const dark = useStore((s) => s.theme) === 'dark'
   if (!trip) return <Navigate to="/trips" replace />
-  // The trip's chosen palette themes only its own screens (empty for default).
+  // The trip's chosen palette themes its screens, in whichever colour scheme.
   return (
-    <div className="flex-1 flex flex-col" style={paletteVars(trip.paletteId)}>
+    <div className="flex-1 flex flex-col" style={paletteVars(trip.paletteId, dark)}>
       <div className="flex-1">
         <Outlet />
       </div>

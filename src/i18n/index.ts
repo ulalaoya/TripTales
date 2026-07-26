@@ -229,6 +229,9 @@ export const STRINGS = {
     restoreDenied: 'השחזור נחסם על ידי חוקי האבטחה. צריך לפרסם מחדש את חוקי ה-Firestore ואז לנסות שוב.',
     versionLabel: 'גרסה',
     checkingIdentity: 'מאתר את הפרופיל שלך…',
+    darkMode: 'מצב לילה',
+    lightMode: 'מצב יום',
+    backToTrips: 'חזרה לכל הטיולים',
     // ----- photo delete (Item 3) -----
     deletePhoto: 'מחיקת התמונה',
     deletePhotoConfirm: 'למחוק את התמונה? הפעולה אינה הפיכה.',
@@ -466,6 +469,9 @@ export const STRINGS = {
     restoreDenied: 'Restore was blocked by the security rules. Re-publish the Firestore rules, then try again.',
     versionLabel: 'Version',
     checkingIdentity: 'Finding your profile…',
+    darkMode: 'Night mode',
+    lightMode: 'Day mode',
+    backToTrips: 'Back to all trips',
     // ----- photo delete (Item 3) -----
     deletePhoto: 'Delete photo',
     deletePhotoConfirm: 'Delete this photo? This cannot be undone.',

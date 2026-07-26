@@ -90,7 +90,7 @@ export function ParticipantRow({ value, isSelf, canEditRole = true, onChange, on
                     aria-checked={value.role === r}
                     onClick={() => onChange({ role: r })}
                     className={`tap px-5 py-2 text-sm font-medium ${
-                      value.role === r ? 'bg-[var(--ink)] text-white' : 'text-[var(--ink)]'
+                      value.role === r ? 'bg-[var(--solid)] text-[var(--on-solid)]' : 'text-[var(--ink)]'
                     }`}
                   >
                     {r === 'מבוגר' ? t('roleAdult') : t('roleChild')}

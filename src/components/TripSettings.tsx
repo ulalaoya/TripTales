@@ -129,7 +129,7 @@ export function TripSettings({ trip }: { trip: Trip }) {
               aria-checked={trip.transport === tr}
               onClick={() => saveInfo({ transport: tr })}
               className={`tap inline-flex items-center gap-1 px-4 py-2 text-sm font-medium ${
-                trip.transport === tr ? 'bg-[var(--ink)] text-white' : 'text-[var(--ink)]'
+                trip.transport === tr ? 'bg-[var(--solid)] text-[var(--on-solid)]' : 'text-[var(--ink)]'
               }`}
             >
               <Icon name={tr === 'flight' ? 'plane' : 'car'} size={18} directional />

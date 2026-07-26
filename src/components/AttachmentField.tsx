@@ -43,7 +43,7 @@ export function AttachmentField({ value, onChange }: Props) {
             aria-checked={mode === m}
             onClick={() => setMode(m)}
             className={`tap inline-flex items-center gap-1 px-3 py-2 text-xs font-medium ${
-              mode === m ? 'bg-[var(--ink)] text-white' : 'text-[var(--ink)]'
+              mode === m ? 'bg-[var(--solid)] text-[var(--on-solid)]' : 'text-[var(--ink)]'
             }`}
           >
             <Icon name={m === 'photo' ? 'camera' : 'share'} size={16} />

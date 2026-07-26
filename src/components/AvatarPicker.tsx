@@ -32,7 +32,7 @@ export function AvatarPicker({ figure, color, onFigure, onColor }: Props) {
             onClick={() => setSetIdx(i)}
             className={`tap px-3 py-1.5 rounded-[14px] text-sm font-medium border transition ${
               i === setIdx
-                ? 'bg-[var(--ink)] text-white border-transparent'
+                ? 'bg-[var(--solid)] text-[var(--on-solid)] border-transparent'
                 : 'bg-white text-[var(--ink)] border-[var(--line)]'
             }`}
           >
