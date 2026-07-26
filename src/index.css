@@ -288,18 +288,16 @@ body {
   color: var(--muted);
 }
 
-/* Facebook-style reaction picker — floating emoji pill above the trigger.
-   Anchored to the inline-END so it opens inward from the photo's left corner. */
+/* Facebook-style reaction picker. `position: fixed` + JS clamping (see
+   ReactionBar) keeps every emoji on screen for tiles in either grid column —
+   CSS anchoring alone pushed the outer column's picker off the screen edge. */
 .reaction-pop {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  inset-inline-end: 0;
-  z-index: 40;
+  position: fixed;
+  z-index: 60;
   display: flex;
   gap: 2px;
   padding: 5px 7px;
-  max-width: min(280px, 78vw);
-  overflow-x: auto;
+  max-width: calc(100vw - 16px);
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 999px;

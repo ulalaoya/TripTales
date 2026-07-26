@@ -23,6 +23,7 @@ import { locationHref, locationLabel } from '../lib/locationLink'
 import { canPlanTrip, isTripMember } from '../lib/tripPermissions'
 import { dayTabLabel, weekdayParts } from '../lib/dayFormat'
 import { sortActivitiesByTime } from '../lib/sortActivities'
+import { initialDayIndex, todayISO } from '../lib/tripSelect'
 import type { Day, Activity, ActivityAttachment, Member, Photo } from '../types'
 import { Icon } from '../components/Icon'
 import { LocationField } from '../components/LocationField'
@@ -56,7 +57,9 @@ export function TripView() {
   const showToast = useStore((s) => s.showToast)
   const setActiveDay = useStore((s) => s.setActiveDay)
 
-  const [dayIdx, setDayIdx] = useState(0)
+  // Open on TODAY's day when the trip is running (falls back to the first/last
+  // day outside the trip's range) — see `lib/tripSelect.initialDayIndex`.
+  const [dayIdx, setDayIdx] = useState(() => initialDayIndex(trip?.days ?? [], todayISO()))
   /** Start point of an in-progress horizontal swipe (see onTouchStart/End). */
   const swipeRef = useRef<{ x: number; y: number } | null>(null)
 

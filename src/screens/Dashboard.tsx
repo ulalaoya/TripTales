@@ -15,6 +15,7 @@ import { Logo, BrandMark } from '../components/Logo'
 import { LangToggle } from '../components/LangToggle'
 import { Avatar } from '../components/Avatar'
 import { SyncBadge } from '../components/SyncBadge'
+import { BuildStamp } from '../components/BuildStamp'
 import { isCloudEnabled } from '../lib/firebase'
 import { cloudJoinByCode, cloudRestore } from '../lib/cloud'
 
@@ -371,11 +372,7 @@ export function Dashboard() {
             they live together at the bottom and out of the header's way. */}
         <div className="mt-6 flex flex-col items-center gap-1.5">
           <SyncBadge />
-          <p className="text-center text-[11px] text-[var(--muted)] opacity-70">
-            <bdi>
-              {t('versionLabel')} {__APP_BUILT_AT__} · {__APP_COMMIT__}
-            </bdi>
-          </p>
+          <BuildStamp />
         </div>
       </div>
 

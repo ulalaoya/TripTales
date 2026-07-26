@@ -10,6 +10,7 @@ import { Avatar } from '../components/Avatar'
 import { ParticipantRow, type ParticipantDraft } from '../components/ParticipantRow'
 import { TripHeader } from '../components/TripHeader'
 import { TripSettings } from '../components/TripSettings'
+import { BuildStamp } from '../components/BuildStamp'
 
 export function People() {
   const t = useT()
@@ -127,6 +128,12 @@ export function People() {
             )
           })}
         </ul>
+
+        {/* Build stamp — also here, not only on the home screen, so the running
+            version is easy to find from inside a trip. */}
+        <div className="mt-6">
+          <BuildStamp />
+        </div>
       </div>
     </div>
   )
