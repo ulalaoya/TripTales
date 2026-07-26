@@ -35,4 +35,24 @@ describe('toggleReact', () => {
     const out2 = toggleReact(out1, '😂', 'm1');             // remove m1
     expect(out2['😂'] ?? []).toEqual(['m2']);
   });
+
+  // A member holds ONE reaction at a time — picking another moves it.
+  it('replaces a member’s previous reaction instead of adding a second', () => {
+    const heart = toggleReact({}, '❤️', 'm1');
+    const smiley = toggleReact(heart, '😂', 'm1');
+    expect(smiley['😂']).toEqual(['m1']);
+    expect(smiley['❤️']).toBeUndefined();
+  });
+
+  it('moving a reaction leaves other members on the old emoji', () => {
+    const start = { '❤️': ['m1', 'm2'] };
+    const out = toggleReact(start, '⭐', 'm1');
+    expect(out['❤️']).toEqual(['m2']);
+    expect(out['⭐']).toEqual(['m1']);
+  });
+
+  it('re-picking the same emoji still clears the reaction', () => {
+    const out = toggleReact(toggleReact({}, '👍', 'm1'), '👍', 'm1');
+    expect(out['👍']).toBeUndefined();
+  });
 });

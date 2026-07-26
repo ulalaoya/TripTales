@@ -53,6 +53,18 @@ export function weekdayWord(iso: string): string {
 }
 
 /**
+ * The three-line day-tab parts: the word 'יום', the weekday letter and the
+ * date, each rendered on its OWN line so every tab looks structurally identical
+ * (Galli feedback — short letters used to share the first line with 'יום').
+ * All three are '' for a malformed date.
+ */
+export function weekdayParts(iso: string): { word: string; letter: string; date: string } {
+  const letter = hebrewWeekday(iso)
+  if (!letter) return { word: '', letter: '', date: '' }
+  return { word: 'יום', letter, date: dayMonth(iso) }
+}
+
+/**
  * Just the day.month part of a date, no leading zeros: '2026-08-10' -> '10.8'.
  * The bottom line of a two-line day tab. Returns '' for a malformed date.
  */

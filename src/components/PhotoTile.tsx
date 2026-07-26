@@ -81,20 +81,21 @@ export function PhotoTile({ photo, tripId, dayId, isParent, member, author }: Pr
         <div className="tile-caption font-hand text-sm truncate">{photo.caption}</div>
       </div>
 
+      {/* Uploader on the inline-start (right in RTL), the reaction marker pushed
+          to the inline-end (left) — the Facebook placement Galli asked for,
+          instead of a wide bar under the tile. */}
       {photo.status === 'approved' && (
-        <div className="mt-1">
-          {/* [uploader name] · [emoji reactions from members] — no decorative heart */}
+        <div className="mt-1 flex items-center gap-1">
           {author && (
-            <div className="flex items-center gap-1 text-[11px]">
-              <span className="font-semibold text-[var(--ink)] truncate">{author.name}</span>
-              <span className="text-[var(--muted)]" aria-hidden>·</span>
-            </div>
+            <span className="text-[11px] font-semibold text-[var(--ink)] truncate">{author.name}</span>
           )}
-          <ReactionBar
-            reacts={photo.reacts}
-            memberId={member.id}
-            onToggle={(e) => reactPhoto(tripId, dayId, photo.id, e, member.id)}
-          />
+          <span className="ms-auto shrink-0">
+            <ReactionBar
+              reacts={photo.reacts}
+              memberId={member.id}
+              onToggle={(e) => reactPhoto(tripId, dayId, photo.id, e, member.id)}
+            />
+          </span>
         </div>
       )}
 

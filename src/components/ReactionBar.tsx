@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Reacts } from '../types'
 import { ALLOWED_EMOJIS } from '../lib/reactions'
 import { useT } from '../i18n/useT'
+import { Icon } from './Icon'
 
 interface Props {
   reacts: Reacts
@@ -10,13 +11,13 @@ interface Props {
 }
 
 /**
- * Facebook-style reactions (Galli feedback): a single 👍 button that opens the
- * full emoji picker on tap, instead of six buttons always on screen.
+ * Facebook-style reaction control (Galli feedback): ONE small marker that sits
+ * in the corner of a photo. It shows the emojis people picked plus a total, or
+ * a plain uncoloured thumbs-up outline when nobody has reacted yet — never a
+ * "הגיבו" caption. Tapping it opens the emoji picker.
  *
- * - The trigger shows YOUR reaction once you have one (👍 otherwise).
- * - Reactions that already exist stay visible next to it as compact counters,
- *   so you can see and toggle them without opening the picker.
- * - The picker closes on selection, on Escape, and on a tap outside.
+ * Reactions are exclusive per member (see `lib/reactions.toggleReact`), so the
+ * emoji shown for you is always your single current choice.
  */
 export function ReactionBar({ reacts, memberId, onToggle }: Props) {
   const t = useT()
@@ -25,6 +26,7 @@ export function ReactionBar({ reacts, memberId, onToggle }: Props) {
 
   const mine = ALLOWED_EMOJIS.find((e) => (reacts[e] ?? []).includes(memberId))
   const active = ALLOWED_EMOJIS.filter((e) => (reacts[e] ?? []).length > 0)
+  const total = active.reduce((sum, e) => sum + (reacts[e] ?? []).length, 0)
 
   useEffect(() => {
     if (!open) return
@@ -44,45 +46,25 @@ export function ReactionBar({ reacts, memberId, onToggle }: Props) {
     }
   }, [open])
 
-  const pillClass = (on: boolean) =>
-    `tap inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm border transition ${
-      on
-        ? 'bg-[var(--coral-soft)] border-[var(--coral)] text-[var(--coral)]'
-        : 'bg-white border-[var(--line)]'
-    }`
-
   return (
-    <div ref={wrapRef} className="relative mt-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          aria-haspopup="menu"
-          aria-label={t('reactLabel')}
-          className={pillClass(!!mine)}
-        >
-          <span aria-hidden>{mine ?? '👍'}</span>
-          <span className="text-xs font-bold">{t('reactLabel')}</span>
-        </button>
-
-        {active.map((emoji) => {
-          const list = reacts[emoji] ?? []
-          return (
-            <button
-              key={emoji}
-              type="button"
-              onClick={() => onToggle(emoji)}
-              aria-pressed={list.includes(memberId)}
-              aria-label={emoji}
-              className={pillClass(list.includes(memberId))}
-            >
-              <span aria-hidden>{emoji}</span>
-              <span className="text-xs font-bold">{list.length}</span>
-            </button>
-          )
-        })}
-      </div>
+    <div ref={wrapRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={t('reactLabel')}
+        className={`tap reaction-chip ${mine ? 'is-mine' : ''}`}
+      >
+        {active.length === 0 ? (
+          <Icon name="thumb" size={17} className="text-[var(--muted)]" />
+        ) : (
+          <>
+            <span aria-hidden>{active.join('')}</span>
+            <span className="reaction-count">{total}</span>
+          </>
+        )}
+      </button>
 
       {open && (
         <div className="reaction-pop" role="menu" aria-label={t('reactLabel')}>
@@ -91,12 +73,13 @@ export function ReactionBar({ reacts, memberId, onToggle }: Props) {
               key={emoji}
               type="button"
               role="menuitem"
+              aria-label={emoji}
+              aria-pressed={mine === emoji}
               onClick={() => {
                 onToggle(emoji)
                 setOpen(false)
               }}
-              aria-label={emoji}
-              className="reaction-pop-btn tap"
+              className={`reaction-pop-btn tap ${mine === emoji ? 'is-mine' : ''}`}
             >
               <span aria-hidden>{emoji}</span>
             </button>

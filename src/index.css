@@ -264,11 +264,36 @@ body {
 .bottom-nav .nav-dot { background: transparent; }
 .bottom-nav .nav-item.active .nav-dot { background: var(--coral); }
 
-/* Facebook-style reaction picker — floating emoji pill above the 👍 trigger. */
+/* Compact reaction marker in the photo corner (no caption, Facebook-style). */
+.reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  min-height: 26px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(37, 46, 75, .07);
+}
+.reaction-chip.is-mine {
+  border-color: var(--coral);
+  background: var(--coral-soft);
+}
+.reaction-count {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+/* Facebook-style reaction picker — floating emoji pill above the trigger.
+   Anchored to the inline-END so it opens inward from the photo's left corner. */
 .reaction-pop {
   position: absolute;
   bottom: calc(100% + 6px);
-  inset-inline-start: 0;
+  inset-inline-end: 0;
   z-index: 40;
   display: flex;
   gap: 2px;
@@ -292,6 +317,10 @@ body {
 .reaction-pop-btn:focus-visible {
   transform: scale(1.22);
   background: var(--coral-soft);
+}
+.reaction-pop-btn.is-mine {
+  background: var(--coral-soft);
+  box-shadow: inset 0 0 0 2px var(--coral);
 }
 
 /* ===== v2 component recipes (from the mobile prototype, Direction A) ===== */
@@ -455,6 +484,9 @@ body {
 
 /* Two-line day tab (Galli feedback #4): weekday word on top, date below —
    constrained so the text never spills outside the tab box. */
+/* Three-line day tab (Galli feedback): the word "יום", the weekday letter and
+   the date each get their OWN line, so every tab has an identical structure —
+   previously short letters like ו׳/ג׳ crept up onto the first line. */
 .tab-day {
   display: flex;
   flex-direction: column;
@@ -464,12 +496,23 @@ body {
   min-width: 52px;
   max-width: 68px;
   padding: 6px 8px;
-  line-height: 1.05;
-  white-space: normal;
+  line-height: 1.15;
+  white-space: nowrap;
   text-align: center;
 }
+.tab-day .tab-day-word,
+.tab-day .tab-day-letter,
+.tab-day .tab-day-date {
+  display: block;
+  width: 100%;
+}
 .tab-day .tab-day-word { font-size: 13px; font-weight: 700; }
+.tab-day .tab-day-letter { font-size: 15px; font-weight: 800; }
 .tab-day .tab-day-date { font-size: 15px; font-weight: 800; }
+
+/* The day strip scrolls horizontally, so it opts back IN to pan-x — the trip
+   screen sets `touch-action: pan-y` to make the day-swipe gesture reach JS. */
+.tabs { touch-action: pan-x; }
 
 /* Trip-card cover image (grid card). */
 .trip-cover {

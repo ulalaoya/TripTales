@@ -21,7 +21,7 @@ import { useStore, useCurrentMember } from '../store/useStore'
 import { useT } from '../i18n/useT'
 import { locationHref, locationLabel } from '../lib/locationLink'
 import { canPlanTrip, isTripMember } from '../lib/tripPermissions'
-import { dayTabLabel, weekdayWord, dayMonth } from '../lib/dayFormat'
+import { dayTabLabel, weekdayParts } from '../lib/dayFormat'
 import { sortActivitiesByTime } from '../lib/sortActivities'
 import type { Day, Activity, ActivityAttachment, Member, Photo } from '../types'
 import { Icon } from '../components/Icon'
@@ -33,7 +33,7 @@ import { TripHeader } from '../components/TripHeader'
 const ACTIVITY_ICONS = ['🍽️', '🏖️', '🏔️', '🎡', '🚗', '✈️', '⛵', '🏨', '🛍️', '☕', '🎫', '📸']
 
 /** Minimum horizontal travel (px) that counts as a day-changing swipe. */
-const SWIPE_MIN_PX = 60
+const SWIPE_MIN_PX = 45
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -138,7 +138,7 @@ export function TripView() {
     const p = e.changedTouches[0]
     const dx = p.clientX - start.x
     const dy = p.clientY - start.y
-    if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.5) return
+    if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.2) return
     const step = dx < 0 ? 1 : -1
     const last = trip.days.length - 1
     setDayIdx((i) => Math.max(0, Math.min(last, Math.min(i, last) + step)))
@@ -150,7 +150,19 @@ export function TripView() {
     : []
 
   return (
-    <div className="paper min-h-full" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    /* `touch-action: pan-y` is what actually makes the swipe fire on a phone:
+       without it the browser claims horizontal gestures (page pan / overscroll)
+       and delivers `touchcancel` instead of `touchend`. Vertical scrolling and
+       pinch-zoom stay untouched; the day strip re-enables pan-x in CSS. */
+    <div
+      className="paper min-h-full"
+      style={{ touchAction: 'pan-y pinch-zoom' }}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={() => {
+        swipeRef.current = null
+      }}
+    >
       <div className="max-w-column mx-auto px-5 py-5">
         <TripHeader
           trip={trip}
@@ -270,6 +282,7 @@ function DayTab({
   onSelect: () => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `daytab:${day.id}`, disabled: !canPlan })
+  const parts = weekdayParts(day.date)
   return (
     <button
       ref={setNodeRef}
@@ -279,8 +292,9 @@ function DayTab({
       onClick={onSelect}
       className={`tab tab-day tap ${active ? 'active' : ''} ${isOver ? 'ring-2 ring-[var(--coral)]' : ''}`}
     >
-      <bdi className="tab-day-word">{weekdayWord(day.date)}</bdi>
-      <bdi className="tab-day-date">{dayMonth(day.date)}</bdi>
+      <bdi className="tab-day-word">{parts.word}</bdi>
+      <bdi className="tab-day-letter">{parts.letter}</bdi>
+      <bdi className="tab-day-date">{parts.date}</bdi>
     </button>
   )
 }

@@ -168,8 +168,9 @@ export function Dashboard() {
               {member.name.split(' ')[0] || member.name}
             </span>
           </button>
+          {/* The sync badge moved down to the footer (next to the build stamp) —
+              up here it crowded the user's name (Galli feedback). */}
           <div className="flex items-center gap-2 shrink-0">
-            <SyncBadge />
             <LangToggle />
             <Logo variant="emboss" size="sm" />
           </div>
@@ -366,13 +367,16 @@ export function Dashboard() {
           </button>
         </div>
 
-        {/* Build stamp — makes "am I running the new version?" answerable at a
-            glance instead of guesswork when a device serves a cached bundle. */}
-        <p className="mt-6 text-center text-[11px] text-[var(--muted)] opacity-70">
-          <bdi>
-            {t('versionLabel')} {__APP_BUILT_AT__} · {__APP_COMMIT__}
-          </bdi>
-        </p>
+        {/* Footer: sync state + build stamp. Both are status information, so
+            they live together at the bottom and out of the header's way. */}
+        <div className="mt-6 flex flex-col items-center gap-1.5">
+          <SyncBadge />
+          <p className="text-center text-[11px] text-[var(--muted)] opacity-70">
+            <bdi>
+              {t('versionLabel')} {__APP_BUILT_AT__} · {__APP_COMMIT__}
+            </bdi>
+          </p>
+        </div>
       </div>
 
       {/* Join-by-code sheet (Galli feedback — Item 7): a real modal over the

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hebrewWeekday, dayTabLabel } from '../dayFormat';
+import { hebrewWeekday, dayTabLabel, weekdayParts } from '../dayFormat';
 
 describe('hebrewWeekday', () => {
   // 2026-08-10 is a Monday → יום שני → ב׳
@@ -34,5 +34,26 @@ describe('dayTabLabel', () => {
 
   it('is stable across calls', () => {
     expect(dayTabLabel('2026-08-16')).toBe(dayTabLabel('2026-08-16'));
+  });
+});
+
+describe('weekdayParts (three-line day tab)', () => {
+  it('splits a date into word / letter / date', () => {
+    // 2026-08-10 is a Monday.
+    expect(weekdayParts('2026-08-10')).toEqual({ word: 'יום', letter: 'ב׳', date: '10.8' });
+  });
+
+  it('always returns the same three-part shape, whatever the weekday', () => {
+    // Short letters (ו׳/ג׳) must still get their own line, never merge upward.
+    for (const iso of ['2026-08-10', '2026-08-11', '2026-08-14', '2026-08-15']) {
+      const p = weekdayParts(iso);
+      expect(p.word).toBe('יום');
+      expect(p.letter).not.toBe('');
+      expect(p.date).not.toBe('');
+    }
+  });
+
+  it('returns empty parts for a malformed date', () => {
+    expect(weekdayParts('nope')).toEqual({ word: '', letter: '', date: '' });
   });
 });
