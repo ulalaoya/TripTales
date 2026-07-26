@@ -94,7 +94,7 @@ export function People() {
                 <li key={m.id} className="member-card">
                   <Avatar figure={m.figure} color={m.color} size={44} />
                   <div className="min-w-0">
-                    <h4 className="text-sm font-semibold truncate">{m.name}</h4>
+                    <h4 className="text-base font-bold truncate">{m.name}</h4>
                     <p className="text-[11px] text-[var(--muted)]">
                       {m.role === 'מבוגר' ? t('roleAdultDesc') : t('roleChildDesc')}
                     </p>

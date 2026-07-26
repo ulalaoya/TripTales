@@ -224,6 +224,8 @@ export const STRINGS = {
     restoreNone: 'לא נמצאו טיולים לשחזור. פִּתחי קודם את האפליקציה במכשיר המקורי (עם אותו מספר טלפון), ואז נסי שוב.',
     restoreUpToDate: 'הטיולים שלך כבר מעודכנים כאן.',
     restoreOffline: 'אין כרגע חיבור לענן — נסי שוב בעוד רגע.',
+    restoreDenied: 'השחזור נחסם על ידי חוקי האבטחה. צריך לפרסם מחדש את חוקי ה-Firestore ואז לנסות שוב.',
+    versionLabel: 'גרסה',
     // ----- photo delete (Item 3) -----
     deletePhoto: 'מחיקת התמונה',
     deletePhotoConfirm: 'למחוק את התמונה? הפעולה אינה הפיכה.',
@@ -456,6 +458,8 @@ export const STRINGS = {
     restoreNone: 'No trips found to restore. Open the app on your original device (same phone number) first, then try again.',
     restoreUpToDate: 'Your trips are already up to date here.',
     restoreOffline: 'No cloud connection right now — try again in a moment.',
+    restoreDenied: 'Restore was blocked by the security rules. Re-publish the Firestore rules, then try again.',
+    versionLabel: 'Version',
     // ----- photo delete (Item 3) -----
     deletePhoto: 'Delete photo',
     deletePhotoConfirm: 'Delete this photo? This cannot be undone.',

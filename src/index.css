@@ -72,10 +72,13 @@ body {
 /* App screen background — light canvas with two radial washes derived from the
    trip's palette (--sea + --coral), so choosing a palette visibly recolours the
    whole screen, not just a few accents. Default palette = the original look. */
+/* Wash opacities stay at the brand-reference values (sea .13 / coral .11) so the
+   DEFAULT "Coral Journey" look is unchanged; a chosen palette becomes obvious
+   through its tinted --canvas and --line instead (see lib/palettes). */
 .paper {
   background:
-    radial-gradient(circle at 10% 12%, color-mix(in srgb, var(--sea) 20%, transparent), transparent 28%),
-    radial-gradient(circle at 88% 7%, color-mix(in srgb, var(--coral) 18%, transparent), transparent 24%),
+    radial-gradient(circle at 10% 12%, color-mix(in srgb, var(--sea) 13%, transparent), transparent 28%),
+    radial-gradient(circle at 88% 7%, color-mix(in srgb, var(--coral) 11%, transparent), transparent 24%),
     var(--canvas);
   color: var(--ink);
 }

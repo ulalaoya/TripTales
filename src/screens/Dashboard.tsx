@@ -50,7 +50,7 @@ export function Dashboard() {
     setRestoring(true)
     try {
       const res = await cloudRestore()
-      if (!res.ok) showToast(t('restoreOffline'))
+      if (!res.ok) showToast(res.reason === 'denied' ? t('restoreDenied') : t('restoreOffline'))
       else if (res.restored > 0) showToast(t('restoringTrips'))
       else if (res.indexed > 0) showToast(t('restoreUpToDate'))
       else showToast(t('restoreNone'))
@@ -212,7 +212,7 @@ export function Dashboard() {
             <span className="inline-block mb-3">
               <BrandMark size={56} />
             </span>
-            <h2 className="font-display text-2xl mb-1">{t('noTrips')}</h2>
+            <h2 className="font-display text-3xl mb-1">{t('noTrips')}</h2>
             <p className="text-sm text-[var(--muted)]">{t('emptyTripsBody')}</p>
 
             {/* Cross-device restore ("automatic by phone") — force it from a fresh
@@ -365,6 +365,14 @@ export function Dashboard() {
             {t('joinWithCode')}
           </button>
         </div>
+
+        {/* Build stamp — makes "am I running the new version?" answerable at a
+            glance instead of guesswork when a device serves a cached bundle. */}
+        <p className="mt-6 text-center text-[11px] text-[var(--muted)] opacity-70">
+          <bdi>
+            {t('versionLabel')} {__APP_BUILT_AT__} · {__APP_COMMIT__}
+          </bdi>
+        </p>
       </div>
 
       {/* Join-by-code sheet (Galli feedback — Item 7): a real modal over the

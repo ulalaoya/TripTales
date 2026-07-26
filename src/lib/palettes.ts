@@ -35,10 +35,14 @@ function accents(primary: string, sea: string, sun: string, lilac: string, ink: 
     '--sun': sun,
     '--lilac': lilac,
     '--ink': ink,
-    // Wash the whole in-trip canvas with a hint of the palette so SWITCHING is
-    // immediately, obviously visible — not just a few tiny accents. Kept very
-    // light (≈7%) so white cards and dark text stay perfectly legible.
-    '--canvas': `color-mix(in srgb, ${primary} 7%, #f4f7fb)`,
+    // Wash the whole in-trip canvas with the palette so SWITCHING is immediately,
+    // obviously visible — not just a few tiny accents. 7% read as "barely any
+    // difference", so this is 15%: clearly tinted while white cards still pop and
+    // the dark --ink text keeps ample contrast.
+    '--canvas': `color-mix(in srgb, ${primary} 15%, #f4f7fb)`,
+    // Tinted card borders + a matching soft surface, so the palette reaches the
+    // cards themselves rather than stopping at the background.
+    '--line': `color-mix(in srgb, ${primary} 22%, #e9ebf2)`,
   }
 }
 

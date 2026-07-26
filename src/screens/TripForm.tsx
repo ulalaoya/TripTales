@@ -257,7 +257,7 @@ export function TripForm() {
 
           {/* ===== Participants — every row editable ===== */}
           <section className="pt-2">
-            <h2 className="font-display text-xl mb-2">{t('wizardParticipants')}</h2>
+            <h2 className="font-display text-2xl mb-2">{t('wizardParticipants')}</h2>
             <ul className="space-y-2">
               {/* Current user — editable, but never removable. */}
               <ParticipantRow
@@ -349,7 +349,7 @@ export function TripForm() {
 
           {/* ===== Share & join code ===== */}
           <section className="pt-2">
-            <h2 className="font-display text-xl mb-2">{t('inviteShare')}</h2>
+            <h2 className="font-display text-2xl mb-2">{t('inviteShare')}</h2>
             <div className="check-head">
               <div>
                 <p className="text-xs text-[var(--muted)] mb-1">{t('joinCodeLabel')}</p>

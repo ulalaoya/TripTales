@@ -183,7 +183,7 @@ export function TripView() {
 
         {/* ===== This day's photos ===== */}
         <section className="mt-8">
-          <h2 className="font-display text-xl mb-2">{t('dayPhotos')}</h2>
+          <h2 className="font-display text-2xl mb-2">{t('dayPhotos')}</h2>
           {visiblePhotos.length === 0 ? (
             <p className="text-sm text-[var(--muted)] mb-3">{t('noPhotos')}</p>
           ) : (
@@ -285,7 +285,7 @@ function DayTitle({
           autoFocus
           aria-label={t('editDayName')}
           placeholder={t('dayNamePlaceholder')}
-          className="tap flex-1 min-w-0 rounded-[14px] px-3 py-2 bg-white border border-[var(--line)] outline-none font-display text-xl"
+          className="tap flex-1 min-w-0 rounded-[14px] px-3 py-2 bg-white border border-[var(--line)] outline-none font-display text-2xl"
         />
         <button type="button" onClick={commit} aria-label={t('save')} className="tap p-2 text-[var(--success)]">
           <Icon name="check" size={18} />
@@ -295,7 +295,7 @@ function DayTitle({
   }
 
   const heading = (
-    <h2 className={`font-display text-xl truncate ${title ? '' : 'text-[var(--muted)]'}`}>
+    <h2 className={`font-display text-2xl truncate ${title ? '' : 'text-[var(--muted)]'}`}>
       {title || t('dayNamePlaceholder')}
     </h2>
   )

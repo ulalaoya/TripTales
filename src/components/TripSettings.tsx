@@ -89,7 +89,7 @@ export function TripSettings({ trip }: { trip: Trip }) {
 
   return (
     <div className="journal-lined p-4 mb-4 space-y-4">
-      <h3 className="font-display text-xl flex items-center gap-2">
+      <h3 className="font-display text-2xl flex items-center gap-2">
         <Icon name="settings" size={18} className="text-[var(--coral)]" />
         {t('editTripInfo')}
       </h3>

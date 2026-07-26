@@ -22,3 +22,11 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+/**
+ * Build stamp injected by `vite.config.ts` (`define`). Shown at the bottom of the
+ * home screen so it is always possible to tell WHICH build a device is running —
+ * the missing piece when "the changes aren't showing" had to be diagnosed.
+ */
+declare const __APP_COMMIT__: string
+declare const __APP_BUILT_AT__: string

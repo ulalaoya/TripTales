@@ -95,7 +95,7 @@ export class ErrorBoundary extends Component<Props, BoundaryState> {
           </div>
 
           <div>
-            <h1 className="font-display text-2xl mb-1">{s.errBoundaryTitle}</h1>
+            <h1 className="font-display text-3xl mb-1">{s.errBoundaryTitle}</h1>
             <p className="text-sm text-[var(--muted)]">{s.errBoundaryBody}</p>
           </div>
 

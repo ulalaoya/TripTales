@@ -111,7 +111,7 @@ export function ParticipantRow({ value, isSelf, canEditRole = true, onChange, on
         <>
           <Avatar figure={value.figure} color={value.color} size={44} />
           <div className="min-w-0">
-            <h4 className="text-sm font-semibold truncate">
+            <h4 className="text-base font-bold truncate">
               {value.name || t('participantName')}
               {isSelf && <span className="text-[var(--muted)] font-normal"> · {t('youLabel')}</span>}
             </h4>

@@ -331,7 +331,10 @@ async function unindexTripForMember(db: Db, fs: FsApi, memberId: string, tripId:
  * Never throws: any failure just leaves the device with whatever it already had.
  * Returns how many trips the index listed and how many were newly (re-)joined.
  */
-async function restoreMyTrips(db: Db, fs: FsApi): Promise<{ indexed: number; restored: number }> {
+async function restoreMyTrips(
+  db: Db,
+  fs: FsApi,
+): Promise<{ indexed: number; restored: number; denied?: boolean }> {
   if (!myUid) return { indexed: 0, restored: 0 }
   const memberId = useStore.getState().currentUserId
   if (!memberId) return { indexed: 0, restored: 0 }
@@ -343,8 +346,11 @@ async function restoreMyTrips(db: Db, fs: FsApi): Promise<{ indexed: number; res
     const raw = (snap.data() as { tripIds?: unknown }).tripIds
     tripIds = Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : []
   } catch (err) {
+    // A `permission-denied` here almost always means the updated firestore.rules
+    // (with the memberTrips block) were never published — report that precisely
+    // instead of failing silently, which is what made this hard to diagnose.
     reportFailure(err, false)
-    return { indexed: 0, restored: 0 }
+    return { indexed: 0, restored: 0, denied: isPermissionDenied(err) }
   }
 
   let restored = 0
@@ -367,10 +373,17 @@ async function restoreMyTrips(db: Db, fs: FsApi): Promise<{ indexed: number; res
   return { indexed: tripIds.length, restored }
 }
 
+/** True for a Firestore rules rejection (unpublished / mismatched rules). */
+function isPermissionDenied(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code
+  if (typeof code === 'string' && code.includes('permission-denied')) return true
+  return /permission[-\s]denied|insufficient permissions/i.test(String(err))
+}
+
 /** Result of a manual "restore my trips" tap (see Dashboard empty state). */
 export type CloudRestoreResult =
   | { ok: true; indexed: number; restored: number }
-  | { ok: false; reason: 'offline' }
+  | { ok: false; reason: 'offline' | 'denied' }
 
 /**
  * Manual, user-triggered cross-device restore — the same flow that runs at
@@ -386,11 +399,12 @@ export async function cloudRestore(): Promise<CloudRestoreResult> {
   try {
     const { db, fs } = await sdkPromise
     await claimMemberDoc(db, fs)
-    const { indexed, restored } = await restoreMyTrips(db, fs)
+    const { indexed, restored, denied } = await restoreMyTrips(db, fs)
+    if (denied) return { ok: false, reason: 'denied' }
     return { ok: true, indexed, restored }
   } catch (err) {
     reportFailure(err, false)
-    return { ok: false, reason: 'offline' }
+    return { ok: false, reason: isPermissionDenied(err) ? 'denied' : 'offline' }
   }
 }
 
