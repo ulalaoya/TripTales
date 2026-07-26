@@ -219,6 +219,11 @@ export const STRINGS = {
     syncFailed: 'הסנכרון נכשל — השינויים נשמרו במכשיר',
     syncPhotoTooBig: 'התמונה גדולה מדי לסנכרון ונשמרה במכשיר בלבד',
     restoringTrips: 'משחזר את הטיולים שלך מהענן…',
+    restoreBtn: 'שחזרי את הטיולים שלי',
+    restoreHint: 'נכנסת ממכשיר חדש? שחזרי את הטיולים שלך לפי מספר הטלפון.',
+    restoreNone: 'לא נמצאו טיולים לשחזור. פִּתחי קודם את האפליקציה במכשיר המקורי (עם אותו מספר טלפון), ואז נסי שוב.',
+    restoreUpToDate: 'הטיולים שלך כבר מעודכנים כאן.',
+    restoreOffline: 'אין כרגע חיבור לענן — נסי שוב בעוד רגע.',
     // ----- photo delete (Item 3) -----
     deletePhoto: 'מחיקת התמונה',
     deletePhotoConfirm: 'למחוק את התמונה? הפעולה אינה הפיכה.',
@@ -446,6 +451,11 @@ export const STRINGS = {
     syncFailed: 'Sync failed — your changes are saved on this device',
     syncPhotoTooBig: 'That photo is too large to sync and stayed on this device',
     restoringTrips: 'Restoring your trips from the cloud…',
+    restoreBtn: 'Restore my trips',
+    restoreHint: 'On a new device? Restore your trips by phone number.',
+    restoreNone: 'No trips found to restore. Open the app on your original device (same phone number) first, then try again.',
+    restoreUpToDate: 'Your trips are already up to date here.',
+    restoreOffline: 'No cloud connection right now — try again in a moment.',
     // ----- photo delete (Item 3) -----
     deletePhoto: 'Delete photo',
     deletePhotoConfirm: 'Delete this photo? This cannot be undone.',

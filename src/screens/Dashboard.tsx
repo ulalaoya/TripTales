@@ -16,7 +16,7 @@ import { LangToggle } from '../components/LangToggle'
 import { Avatar } from '../components/Avatar'
 import { SyncBadge } from '../components/SyncBadge'
 import { isCloudEnabled } from '../lib/firebase'
-import { cloudJoinByCode } from '../lib/cloud'
+import { cloudJoinByCode, cloudRestore } from '../lib/cloud'
 
 type Tab = 'all' | 'planned' | 'ended' | 'idea'
 
@@ -42,6 +42,22 @@ export function Dashboard() {
   const [joinOpen, setJoinOpen] = useState(false)
   const [code, setCode] = useState('')
   const [joinErr, setJoinErr] = useState('')
+  const [restoring, setRestoring] = useState(false)
+
+  /** Force the cross-device restore ("automatic by phone") with visible feedback. */
+  async function onRestore() {
+    if (restoring) return
+    setRestoring(true)
+    try {
+      const res = await cloudRestore()
+      if (!res.ok) showToast(t('restoreOffline'))
+      else if (res.restored > 0) showToast(t('restoringTrips'))
+      else if (res.indexed > 0) showToast(t('restoreUpToDate'))
+      else showToast(t('restoreNone'))
+    } finally {
+      setRestoring(false)
+    }
+  }
 
   const today = todayISO()
   const isParent = member.role === 'מבוגר'
@@ -198,6 +214,24 @@ export function Dashboard() {
             </span>
             <h2 className="font-display text-2xl mb-1">{t('noTrips')}</h2>
             <p className="text-sm text-[var(--muted)]">{t('emptyTripsBody')}</p>
+
+            {/* Cross-device restore ("automatic by phone") — force it from a fresh
+                device with visible feedback, in case the automatic pass ran before
+                the original device had published its trip index. */}
+            {isCloudEnabled && (
+              <div className="mt-5 pt-4 border-t border-[var(--line)]">
+                <p className="text-xs text-[var(--muted)] mb-2">{t('restoreHint')}</p>
+                <button
+                  type="button"
+                  onClick={onRestore}
+                  disabled={restoring}
+                  className="secondary-btn tap inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm disabled:opacity-60"
+                >
+                  <Icon name="cloud" size={16} />
+                  {restoring ? t('restoringTrips') : t('restoreBtn')}
+                </button>
+              </div>
+            )}
           </div>
         )}
 

@@ -179,7 +179,8 @@ export async function cloudSignIn(): Promise<void> {
     // Cross-device restore: re-join every trip on this member's cloud index so a
     // fresh device (new anonymous uid) recovers all their trips automatically —
     // the "automatic by phone" model (see restoreMyTrips + firestore.rules).
-    await restoreMyTrips(db, fs)
+    const { restored } = await restoreMyTrips(db, fs)
+    if (restored > 0) useStore.getState().showToast(str('restoringTrips'))
     watchLocalChanges()
 
     // First push = the migration. `myTrips()` excludes `t-flight`, so the
@@ -328,21 +329,22 @@ async function unindexTripForMember(db: Db, fs: FsApi, memberId: string, tripId:
  * That is the accepted, documented no-SMS model — see firestore.rules.
  *
  * Never throws: any failure just leaves the device with whatever it already had.
+ * Returns how many trips the index listed and how many were newly (re-)joined.
  */
-async function restoreMyTrips(db: Db, fs: FsApi): Promise<void> {
-  if (!myUid) return
+async function restoreMyTrips(db: Db, fs: FsApi): Promise<{ indexed: number; restored: number }> {
+  if (!myUid) return { indexed: 0, restored: 0 }
   const memberId = useStore.getState().currentUserId
-  if (!memberId) return
+  if (!memberId) return { indexed: 0, restored: 0 }
 
   let tripIds: string[] = []
   try {
     const snap = await fs.getDoc(fs.doc(db, 'memberTrips', memberId))
-    if (!snap.exists()) return
+    if (!snap.exists()) return { indexed: 0, restored: 0 }
     const raw = (snap.data() as { tripIds?: unknown }).tripIds
     tripIds = Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : []
   } catch (err) {
     reportFailure(err, false)
-    return
+    return { indexed: 0, restored: 0 }
   }
 
   let restored = 0
@@ -362,7 +364,34 @@ async function restoreMyTrips(db: Db, fs: FsApi): Promise<void> {
       if (import.meta.env.DEV) console.warn('[TripTales restore]', tripId, err)
     }
   }
-  if (restored > 0) useStore.getState().showToast(str('restoringTrips'))
+  return { indexed: tripIds.length, restored }
+}
+
+/** Result of a manual "restore my trips" tap (see Dashboard empty state). */
+export type CloudRestoreResult =
+  | { ok: true; indexed: number; restored: number }
+  | { ok: false; reason: 'offline' }
+
+/**
+ * Manual, user-triggered cross-device restore — the same flow that runs at
+ * sign-in, exposed as a button so a fresh device can force it (and get visible
+ * feedback) if the automatic pass ran before the original device had published
+ * its index. Re-claims the member document first, so reading the private index
+ * is permitted, then re-joins every trip on it.
+ */
+export async function cloudRestore(): Promise<CloudRestoreResult> {
+  if (!isCloudEnabled || !myUid) return { ok: false, reason: 'offline' }
+  const sdkPromise = getCloudSdk()
+  if (!sdkPromise) return { ok: false, reason: 'offline' }
+  try {
+    const { db, fs } = await sdkPromise
+    await claimMemberDoc(db, fs)
+    const { indexed, restored } = await restoreMyTrips(db, fs)
+    return { ok: true, indexed, restored }
+  } catch (err) {
+    reportFailure(err, false)
+    return { ok: false, reason: 'offline' }
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -51,7 +51,7 @@ export function TripHeader({ trip, subtitle, action }: Props) {
         </div>
         {action}
       </div>
-      {subtitle && <p className="text-sm text-[var(--muted)] mt-1">{subtitle}</p>}
+      {subtitle && <p className="text-lg font-bold text-[var(--muted)] mt-1">{subtitle}</p>}
     </header>
   )
 }
