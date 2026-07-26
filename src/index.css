@@ -69,11 +69,13 @@ body {
 
 /* ===== Surfaces ===== */
 
-/* App screen background — light canvas with the two radial washes. */
+/* App screen background — light canvas with two radial washes derived from the
+   trip's palette (--sea + --coral), so choosing a palette visibly recolours the
+   whole screen, not just a few accents. Default palette = the original look. */
 .paper {
   background:
-    radial-gradient(circle at 10% 12%, rgba(66, 184, 212, .10), transparent 26%),
-    radial-gradient(circle at 88% 7%, rgba(255, 107, 102, .09), transparent 22%),
+    radial-gradient(circle at 10% 12%, color-mix(in srgb, var(--sea) 20%, transparent), transparent 28%),
+    radial-gradient(circle at 88% 7%, color-mix(in srgb, var(--coral) 18%, transparent), transparent 24%),
     var(--canvas);
   color: var(--ink);
 }

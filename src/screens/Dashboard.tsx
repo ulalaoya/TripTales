@@ -160,7 +160,7 @@ export function Dashboard() {
         </header>
 
         <div className="flex items-center justify-between mb-3">
-          <h1 className="font-display text-2xl">{t.fn('allTripsOf')(member.name.split(' ')[0] || member.name)}</h1>
+          <h1 className="font-display text-3xl">{t.fn('allTripsOf')(member.name.split(' ')[0] || member.name)}</h1>
           {hasTrips && can(member.role, 'trip.edit') && (
             <button
               type="button"
@@ -196,7 +196,7 @@ export function Dashboard() {
             <span className="inline-block mb-3">
               <BrandMark size={56} />
             </span>
-            <h2 className="font-display text-xl mb-1">{t('noTrips')}</h2>
+            <h2 className="font-display text-2xl mb-1">{t('noTrips')}</h2>
             <p className="text-sm text-[var(--muted)]">{t('emptyTripsBody')}</p>
           </div>
         )}
@@ -231,7 +231,7 @@ export function Dashboard() {
                         directional
                         className="text-[var(--coral)] shrink-0"
                       />
-                      <h3 className="text-lg font-bold truncate">{trip.name}</h3>
+                      <h3 className="text-xl font-extrabold truncate">{trip.name}</h3>
                     </div>
                     <p className="text-xs text-[var(--muted)] mt-1">
                       <bdi>

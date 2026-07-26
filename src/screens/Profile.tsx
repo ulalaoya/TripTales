@@ -50,7 +50,7 @@ export function Profile() {
         <div className="flex items-center gap-3 mb-5">
           <Avatar figure={figure} color={color} size={56} />
           <div>
-            <h1 className="font-display text-2xl text-[var(--ink-fountain)]">{t('profile')}</h1>
+            <h1 className="font-display text-3xl text-[var(--ink-fountain)]">{t('profile')}</h1>
             <p className="text-sm text-[var(--ink-pencil)] font-mono">
               <bdi>{member.phone}</bdi>
             </p>

@@ -51,7 +51,7 @@ export function NewTraveller() {
           <LangToggle />
         </div>
 
-        <h1 className="font-display text-2xl mb-1 text-[var(--ink-fountain)]">{t('newTraveller')}</h1>
+        <h1 className="font-display text-3xl mb-1 text-[var(--ink-fountain)]">{t('newTraveller')}</h1>
         <p className="text-sm text-[var(--ink-pencil)] mb-4">
           {t('phoneLocked')}: <bdi className="font-mono">{phone}</bdi>
         </p>

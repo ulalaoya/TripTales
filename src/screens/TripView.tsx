@@ -152,7 +152,7 @@ export function TripView() {
               t={t}
               onSave={(title) => updateDayTitle(trip.id, day.id, title)}
             />
-            <span className="text-lg font-display text-[var(--muted)] shrink-0">{t('activities')}</span>
+            <span className="text-xl font-display text-[var(--muted)] shrink-0">{t('activities')}</span>
           </div>
 
           {ordered.length === 0 && <p className="text-sm text-[var(--muted)] mb-3">{t('noActivities')}</p>}
@@ -183,7 +183,7 @@ export function TripView() {
 
         {/* ===== This day's photos ===== */}
         <section className="mt-8">
-          <h2 className="font-display text-lg mb-2">{t('dayPhotos')}</h2>
+          <h2 className="font-display text-xl mb-2">{t('dayPhotos')}</h2>
           {visiblePhotos.length === 0 ? (
             <p className="text-sm text-[var(--muted)] mb-3">{t('noPhotos')}</p>
           ) : (
@@ -285,7 +285,7 @@ function DayTitle({
           autoFocus
           aria-label={t('editDayName')}
           placeholder={t('dayNamePlaceholder')}
-          className="tap flex-1 min-w-0 rounded-[14px] px-3 py-2 bg-white border border-[var(--line)] outline-none font-display text-lg"
+          className="tap flex-1 min-w-0 rounded-[14px] px-3 py-2 bg-white border border-[var(--line)] outline-none font-display text-xl"
         />
         <button type="button" onClick={commit} aria-label={t('save')} className="tap p-2 text-[var(--success)]">
           <Icon name="check" size={18} />
@@ -295,7 +295,7 @@ function DayTitle({
   }
 
   const heading = (
-    <h2 className={`font-display text-lg truncate ${title ? '' : 'text-[var(--muted)]'}`}>
+    <h2 className={`font-display text-xl truncate ${title ? '' : 'text-[var(--muted)]'}`}>
       {title || t('dayNamePlaceholder')}
     </h2>
   )

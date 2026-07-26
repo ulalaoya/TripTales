@@ -50,7 +50,7 @@ export function Checklist() {
         {/* Progress head */}
         <div className="check-head mb-4">
           <div>
-            <h3 className="font-display text-base">{t('almostReady')}</h3>
+            <h3 className="font-display text-lg">{t('almostReady')}</h3>
             <p className="text-xs text-[var(--muted)] mt-1">{t.fn('packedCount')(done, total)}</p>
           </div>
           <div
@@ -168,7 +168,7 @@ function ChecklistGroupCard({
   return (
     <section>
       <div className="flex items-center gap-2 mb-1">
-        <h4 className="font-display text-base flex items-center gap-2">
+        <h4 className="font-display text-lg flex items-center gap-2">
           <span aria-hidden>{group.emoji}</span>
           {group.name}
         </h4>

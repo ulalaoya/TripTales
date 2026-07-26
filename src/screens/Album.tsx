@@ -55,7 +55,7 @@ export function Album() {
               if (photos.length === 0) return null
               return (
                 <section key={d.id}>
-                  <h2 className="font-display text-base mb-2">
+                  <h2 className="font-display text-lg mb-2">
                     {d.title || t('dayNamePlaceholder')}{' '}
                     <span className="text-xs text-[var(--muted)]">
                       <bdi>{dayTabLabel(d.date)}</bdi>

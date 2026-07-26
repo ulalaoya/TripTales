@@ -164,7 +164,7 @@ export function TripForm() {
           <Logo size="sm" />
         </header>
 
-        <h1 className="font-display text-2xl mb-4">{t('newTripTitle')}</h1>
+        <h1 className="font-display text-3xl mb-4">{t('newTripTitle')}</h1>
 
         <form onSubmit={save} className="space-y-4">
           <Field label={t('tripName')}>
@@ -257,7 +257,7 @@ export function TripForm() {
 
           {/* ===== Participants — every row editable ===== */}
           <section className="pt-2">
-            <h2 className="font-display text-lg mb-2">{t('wizardParticipants')}</h2>
+            <h2 className="font-display text-xl mb-2">{t('wizardParticipants')}</h2>
             <ul className="space-y-2">
               {/* Current user — editable, but never removable. */}
               <ParticipantRow
@@ -349,7 +349,7 @@ export function TripForm() {
 
           {/* ===== Share & join code ===== */}
           <section className="pt-2">
-            <h2 className="font-display text-lg mb-2">{t('inviteShare')}</h2>
+            <h2 className="font-display text-xl mb-2">{t('inviteShare')}</h2>
             <div className="check-head">
               <div>
                 <p className="text-xs text-[var(--muted)] mb-1">{t('joinCodeLabel')}</p>
