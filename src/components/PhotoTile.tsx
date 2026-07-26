@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { useT } from '../i18n/useT'
 import type { Member, Photo } from '../types'
@@ -21,6 +22,7 @@ interface Props {
  */
 export function PhotoTile({ photo, tripId, dayId, isParent, member, author }: Props) {
   const t = useT()
+  const [showCaption, setShowCaption] = useState(false)
   const approvePhoto = useStore((s) => s.approvePhoto)
   const rejectPhoto = useStore((s) => s.rejectPhoto)
   const deletePhoto = useStore((s) => s.deletePhoto)
@@ -78,7 +80,30 @@ export function PhotoTile({ photo, tripId, dayId, isParent, member, author }: Pr
         ) : (
           <img src={photo.src} alt={photo.caption} />
         )}
-        <div className="tile-caption font-hand text-sm truncate">{photo.caption}</div>
+        {/* The caption is no longer printed across the photo. It hides behind a
+            small icon and is revealed on tap (Galli feedback). */}
+        {photo.caption && (
+          <>
+            <button
+              type="button"
+              onClick={() => setShowCaption((v) => !v)}
+              aria-expanded={showCaption}
+              aria-label={t('showCaption')}
+              className="tap absolute bottom-1 z-10 p-1.5 rounded-full"
+              style={{
+                insetInlineStart: 6,
+                color: '#fff',
+                background: 'rgba(23,31,48,.42)',
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              <Icon name="caption" size={18} />
+            </button>
+            {showCaption && (
+              <div className="tile-caption font-hand text-sm">{photo.caption}</div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Uploader on the inline-start (right in RTL), the reaction marker pushed

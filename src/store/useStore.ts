@@ -12,10 +12,11 @@ import type {
   Figure,
   ChecklistGroup,
   ChecklistItem,
+  Reacts,
 } from '../types'
 import { SEED_MEMBERS, SEED_TRIPS, makeDefaultChecklist, makeDriveTrip } from '../data/seed'
 import { normalizePhone } from '../lib/phone'
-import { toggleReact } from '../lib/reactions'
+import { toggleReact, isAllowedEmoji } from '../lib/reactions'
 import { uploadStatusFor } from '../lib/permissions'
 import { canEditChecklist } from '../lib/checklist'
 import { canAddChecklistItem } from '../lib/checklistPerms'
@@ -450,11 +451,15 @@ export const useStore = create<State>()(
 
       addPhoto: (tripId, dayId, photo, uploaderRole) => {
         const status = uploadStatusFor(uploaderRole)
+        // The mood chosen in the composer IS the uploader's reaction, so the
+        // photo arrives in the album already carrying it (Galli feedback — the
+        // mood used to be stored and then never surfaced anywhere).
+        const reacts: Reacts = photo.mood && isAllowedEmoji(photo.mood) ? { [photo.mood]: [photo.by] } : {}
         set((s) => ({
           trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({
               ...d,
-              photos: [...d.photos, { ...photo, id: uid('p'), status, fav: false, reacts: {} }],
+              photos: [...d.photos, { ...photo, id: uid('p'), status, fav: false, reacts }],
             })),
           ),
         }))

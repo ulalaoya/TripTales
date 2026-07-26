@@ -31,11 +31,14 @@ export type IconName =
   | 'thumb'
   | 'moon'
   | 'sun'
+  | 'caption'
 
 const PATHS: Record<IconName, string> = {
   mapPin: '<path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/>',
   // Outline thumbs-up — the "no reactions yet" state of the reaction control.
   thumb: '<path d="M7 10v10H4V10z"/><path d="M7 10l4.2-6.4a1.7 1.7 0 0 1 3.1 1V9h4.3a2 2 0 0 1 2 2.4l-1.3 6A2 2 0 0 1 17.3 19H7"/>',
+  // Speech bubble with text lines — reveals a photo's caption on demand.
+  caption: '<path d="M4 5h16v11H8l-4 3.5z"/><path d="M8 9h8M8 12.5h5"/>',
   // Night / day mode toggle.
   moon: '<path d="M20 14.5A8.2 8.2 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/>',

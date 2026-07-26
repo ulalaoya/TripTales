@@ -6,12 +6,18 @@ import { todayISO } from '../lib/tripSelect'
 import { dayTabLabel } from '../lib/dayFormat'
 import { isCloudEnabled } from '../lib/firebase'
 import { compressDataUrl } from '../lib/compressImage'
+import { ALLOWED_EMOJIS } from '../lib/reactions'
 import type { Member } from '../types'
 import { Icon } from '../components/Icon'
 import { Avatar } from '../components/Avatar'
 import { TripHeader } from '../components/TripHeader'
 
-const MOODS = ['🤩', '😍', '😂', '😋', '😴', '😱']
+/**
+ * The mood choices ARE the photo's reaction emojis (Galli feedback): whatever is
+ * picked here becomes a real reaction on the saved photo, instead of a mood that
+ * was recorded and then never shown anywhere.
+ */
+const MOODS = ALLOWED_EMOJIS
 
 export function Moment() {
   const t = useT()
@@ -29,7 +35,9 @@ export function Moment() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [dataUrl, setDataUrl] = useState('')
   const [caption, setCaption] = useState('')
-  const [mood, setMood] = useState(MOODS[0])
+  // No preselected mood — an emoji now becomes a real reaction, so it must be a
+  // deliberate choice. Tapping the selected one clears it.
+  const [mood, setMood] = useState<string>('')
   const [people, setPeople] = useState<string[]>(trip?.members ?? [])
   const [dayId, setDayId] = useState<string>(() => {
     if (!trip || trip.days.length === 0) return ''
@@ -85,7 +93,7 @@ export function Moment() {
       const status = addPhoto(
         trip!.id,
         dayId,
-        { src: dataUrl, caption: caption.trim(), by: member.id, mood, people },
+        { src: dataUrl, caption: caption.trim(), by: member.id, mood: mood || undefined, people },
         member.role,
       )
       showToast(status === 'pending' ? t('sentForApproval') : t('momentSaved'))
@@ -103,13 +111,18 @@ export function Moment() {
 
         <form onSubmit={save} className="composer space-y-3">
           {/* Dropzone */}
-          <button type="button" onClick={() => fileRef.current?.click()} className="dropzone tap" aria-label={t('addPhotoVideo')}>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className={`dropzone tap ${dataUrl ? 'has-photo' : ''}`}
+            aria-label={t('addPhotoVideo')}
+          >
             {dataUrl ? (
               <img src={dataUrl} alt={caption || t('addPhotoVideo')} />
             ) : (
               <>
                 <span className="bubble">
-                  <Icon name="camera" size={22} />
+                  <Icon name="album" size={22} />
                 </span>
                 <strong className="text-[var(--ink)] text-sm">{t('addPhotoVideo')}</strong>
                 <span className="text-xs">{t('addPhotoHint')}</span>
@@ -143,7 +156,7 @@ export function Moment() {
                   type="button"
                   role="radio"
                   aria-checked={mood === m}
-                  onClick={() => setMood(m)}
+                  onClick={() => setMood((cur) => (cur === m ? '' : m))}
                   className={`emoji-btn tap ${mood === m ? 'selected' : ''}`}
                 >
                   {m}
@@ -156,6 +169,8 @@ export function Moment() {
           <div>
             <label className="block text-xs font-semibold mb-1.5">{t('peopleQ')}</label>
             <div className="flex flex-wrap gap-2">
+              {/* Every member of THIS trip, each with their NAME — an avatar
+                  alone was not enough to tell people apart (Galli feedback). */}
               {tripMembers.map((m) => {
                 const on = people.includes(m.id)
                 return (
@@ -164,11 +179,15 @@ export function Moment() {
                     type="button"
                     onClick={() => togglePerson(m.id)}
                     aria-pressed={on}
-                    aria-label={m.name}
-                    className="tap rounded-[14px]"
-                    style={{ opacity: on ? 1 : 0.4, boxShadow: on ? '0 0 0 3px var(--sea-soft)' : 'none' }}
+                    className={`tap inline-flex items-center gap-2 rounded-[14px] border ps-2 pe-3 py-1.5 ${
+                      on
+                        ? 'border-[var(--coral)] bg-[var(--coral-soft)]'
+                        : 'border-[var(--line)] bg-white opacity-60'
+                    }`}
                   >
-                    <Avatar figure={m.figure} color={m.color} size={40} />
+                    <Avatar figure={m.figure} color={m.color} size={32} />
+                    <span className="text-sm font-bold text-[var(--ink)]">{m.name}</span>
+                    {on && <Icon name="check" size={15} className="text-[var(--coral)]" />}
                   </button>
                 )
               })}

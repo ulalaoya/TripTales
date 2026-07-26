@@ -290,13 +290,14 @@ body {
   width: 100%;
   height: auto;
 }
+/* Revealed on demand (see PhotoTile) rather than always covering the photo. */
 .gallery-tile .tile-caption {
   position: absolute;
   inset-inline: 0;
   bottom: 0;
-  padding: 22px 10px 9px;
+  padding: 30px 10px 10px;
   color: #fff;
-  background: linear-gradient(to top, rgba(23, 31, 48, .48), transparent 50%);
+  background: linear-gradient(to top, rgba(23, 31, 48, .88), rgba(23, 31, 48, .55) 55%, transparent);
 }
 
 /* Pending overlay pill — sun-tinted. */
@@ -704,13 +705,22 @@ body {
   color: var(--coral);
   background: var(--coral-soft);
 }
+/* The chosen photo is PREVIEWED WHOLE (`contain`), not cropped to the box —
+   `cover` was slicing a thin strip out of tall phone photos (Galli feedback). */
 .dropzone > svg,
 .dropzone > img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--canvas);
+}
+/* Give a previewed photo room to breathe. */
+.dropzone.has-photo {
+  min-height: 300px;
+  border-style: solid;
+  border-color: var(--line);
 }
 .emoji-btn {
   min-width: 44px;

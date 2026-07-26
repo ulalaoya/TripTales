@@ -82,6 +82,42 @@ export const PALETTES: Palette[] = [
 
 const BY_ID = new Map(PALETTES.map((p) => [p.id, p]))
 
+/** '#rgb' | '#rrggbb' → [r, g, b], or null when unparseable. */
+function parseHex(hex: string): [number, number, number] | null {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim())
+  if (!m) return null
+  const h = m[1].length === 3 ? m[1].replace(/./g, (c) => c + c) : m[1]
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]
+}
+
+/** Perceived luminance on 0–1. */
+function luminance(hex: string): number {
+  const rgb = parseHex(hex)
+  if (!rgb) return 1
+  return (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255
+}
+
+/** Blend a colour toward white by `amount` (0–1). */
+function lighten(hex: string, amount: number): string {
+  const rgb = parseHex(hex)
+  if (!rgb) return hex
+  const to = (c: number) => Math.round(c + (255 - c) * amount)
+  return `#${rgb.map((c) => to(c).toString(16).padStart(2, '0')).join('')}`
+}
+
+/**
+ * An accent that is legible on a DARK surface.
+ *
+ * Dark accents (the Monochrome palette's charcoal, Orchid's deep magenta) all
+ * but disappear against the night canvas — activity times and the transport icon
+ * became unreadable (Galli feedback). Anything below the threshold is lifted
+ * toward white; already-vivid accents are left exactly as they are.
+ */
+const DARK_ACCENT_MIN_LUM = 0.28
+function forDark(hex: string): string {
+  return luminance(hex) < DARK_ACCENT_MIN_LUM ? lighten(hex, 0.45) : hex
+}
+
 /** The palette for a trip (defaults to the base 'coral' palette). */
 export function paletteById(id: string | undefined): Palette {
   return (id && BY_ID.get(id)) || PALETTES[0]
@@ -95,7 +131,13 @@ export function paletteById(id: string | undefined): Palette {
 export function paletteVars(id: string | undefined, dark = false): CSSProperties {
   const { colors } = paletteById(id)
   if (!colors) return {}
-  const { primary, sea, sun, lilac, ink } = colors
+  const raw = colors
+  // At night, lift accents that would be invisible on the dark canvas.
+  const primary = dark ? forDark(raw.primary) : raw.primary
+  const sea = dark ? forDark(raw.sea) : raw.sea
+  const sun = dark ? forDark(raw.sun) : raw.sun
+  const lilac = dark ? forDark(raw.lilac) : raw.lilac
+  const ink = raw.ink
   const surface = dark ? DARK_PAPER : 'white'
   const softPct = dark ? 24 : 13
 

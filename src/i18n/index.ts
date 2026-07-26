@@ -117,7 +117,8 @@ export const STRINGS = {
     // ----- moment composer -----
     momentTitle: 'רגע חדש',
     addPhotoVideo: 'הוסיפו תמונה',
-    addPhotoHint: 'מהמצלמה או מגלריית הטלפון',
+    addPhotoHint: 'מגלריית הטלפון',
+    showCaption: 'הצגת הכיתוב',
     momentCaptionQ: 'מה קרה ברגע הזה?',
     momentCaptionPh: 'כתבו משפט קטן שיזכיר לכם את הרגע...',
     moodQ: 'איך היה?',
@@ -357,7 +358,8 @@ export const STRINGS = {
     // ----- moment composer -----
     momentTitle: 'New moment',
     addPhotoVideo: 'Add a photo',
-    addPhotoHint: 'From your camera or photo gallery',
+    addPhotoHint: 'From your photo gallery',
+    showCaption: 'Show caption',
     momentCaptionQ: 'What happened in this moment?',
     momentCaptionPh: 'Write a short line to remember the moment...',
     moodQ: 'How was it?',
