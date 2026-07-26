@@ -24,7 +24,7 @@ import { generateJoinCode } from '../lib/joinCode'
 import { canJoinWithCode } from '../lib/tripPermissions'
 import { reorderActivities, moveActivityToDay } from '../lib/activities'
 import { buildDays } from '../lib/days'
-import { pickNewer } from '../lib/mergeRemote'
+import { pickNewer, preserveUnsyncedPhotos } from '../lib/mergeRemote'
 import { remapMemberId } from '../lib/memberIdentity'
 import type { SyncState } from '../lib/syncState'
 import type { Lang } from '../i18n'
@@ -631,7 +631,11 @@ export const useStore = create<State>()(
             return { trips: mapTrip(s.trips, trip.id, (t) => ({ ...t, memberUids: trip.memberUids ?? t.memberUids })) }
           }
           // Keep the local ordering — `order` is a per-device presentation choice.
-          return { trips: mapTrip(s.trips, trip.id, () => ({ ...trip, order: local.order })) }
+          // `preserveUnsyncedPhotos` guarantees that adopting the remote copy can
+          // never drop photos this device has not uploaded yet (they would then
+          // be deleted from the cloud on the next push, i.e. lost for good).
+          const merged = preserveUnsyncedPhotos(local, trip)
+          return { trips: mapTrip(s.trips, trip.id, () => ({ ...merged, order: local.order })) }
         }),
 
       markTripPushed: (tripId, updatedAt, memberUids) =>

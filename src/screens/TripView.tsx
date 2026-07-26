@@ -117,10 +117,10 @@ export function TripView() {
   /**
    * Swipe left/right to move between days (Galli feedback).
    *
-   * The day strip is RTL — day 1 sits on the RIGHT — so a swipe LEFT advances to
-   * the next day and a swipe RIGHT goes back, matching the visual order. Swipes
-   * that start inside the scrollable tab strip are ignored (that gesture scrolls
-   * the strip), as are mostly-vertical drags, so normal scrolling is untouched.
+   * Swiping LEFT→RIGHT moves FORWARD to the next day, and right→left goes back
+   * (Galli's chosen direction). Swipes that start inside the scrollable tab
+   * strip are ignored (that gesture scrolls the strip), as are mostly-vertical
+   * drags, so normal scrolling is untouched.
    */
   function onTouchStart(e: React.TouchEvent) {
     if ((e.target as HTMLElement).closest?.('.tabs')) {
@@ -139,7 +139,7 @@ export function TripView() {
     const dx = p.clientX - start.x
     const dy = p.clientY - start.y
     if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.2) return
-    const step = dx < 0 ? 1 : -1
+    const step = dx > 0 ? 1 : -1
     const last = trip.days.length - 1
     setDayIdx((i) => Math.max(0, Math.min(last, Math.min(i, last) + step)))
   }

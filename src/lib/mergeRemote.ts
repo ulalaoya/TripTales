@@ -33,3 +33,51 @@ export function pickNewer<T extends { updatedAt?: number }>(
   if (r === null) return local
   return l > r ? local : remote
 }
+
+/** Minimal shapes needed to merge photos back into a winning remote trip. */
+interface PhotoLike {
+  id: string
+  updatedAt?: number
+}
+interface DayLike<P extends PhotoLike> {
+  id: string
+  photos: P[]
+}
+interface TripLike<P extends PhotoLike, D extends DayLike<P>> {
+  days: D[]
+}
+
+/**
+ * Re-attach local photos that the winning REMOTE copy does not carry.
+ *
+ * WHY THIS EXISTS — it prevents real, permanent photo loss. A trip document and
+ * its photos live in two different Firestore places (the doc, and a `photos`
+ * subcollection), so a trip update can arrive while the photo snapshot is still
+ * in flight. Replacing the local trip wholesale at that moment deletes photos
+ * that only existed on this device; the next push then deletes them from the
+ * cloud too, and they are gone everywhere.
+ *
+ * The rule: a local photo with NO `updatedAt` has never been confirmed by the
+ * server, so its absence from the remote copy means "not uploaded yet", never
+ * "deleted" — keep it. A photo that HAS been stamped by the server may legally
+ * disappear (someone deleted it), so those are allowed through.
+ */
+export function preserveUnsyncedPhotos<P extends PhotoLike, D extends DayLike<P>, T extends TripLike<P, D>>(
+  local: T,
+  remote: T,
+): T {
+  const localDays = new Map(local.days.map((d) => [d.id, d]))
+  let changed = false
+
+  const days = remote.days.map((day) => {
+    const mine = localDays.get(day.id)
+    if (!mine) return day
+    const remoteIds = new Set(day.photos.map((p) => p.id))
+    const unsynced = mine.photos.filter((p) => p.updatedAt === undefined && !remoteIds.has(p.id))
+    if (unsynced.length === 0) return day
+    changed = true
+    return { ...day, photos: [...day.photos, ...unsynced] }
+  })
+
+  return changed ? { ...remote, days } : remote
+}

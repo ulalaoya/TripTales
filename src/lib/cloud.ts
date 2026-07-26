@@ -511,7 +511,13 @@ function subscribeTrips(database: Db, fs: FsApi): void {
           }
           remoteTripDocs.set(tripId, { ...(change.doc.data() as Record<string, unknown>), id: tripId })
           subscribePhotos(database, fs, tripId)
-          mergeTrip(tripId)
+          // A trip document and its photos arrive through TWO separate
+          // snapshots. Merging before the photo snapshot has landed would build
+          // the trip with an empty album and — when the remote copy is the newer
+          // one — wipe this device's photos, which the next push then deletes
+          // from the cloud as well. So the first merge always waits for photos;
+          // `subscribePhotos` performs it as soon as they arrive.
+          if (remotePhotos.has(tripId)) mergeTrip(tripId)
         }
       },
       (err) => reportFailure(err, false),
