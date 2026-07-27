@@ -8,7 +8,6 @@ import { checklistProgress } from '../lib/checklist'
 import { coverPhotoOf } from '../lib/tripCover'
 import { tripStatus, statusLabel, statusTag, type TripStatus } from '../lib/tripStatus'
 import { todayISO } from '../lib/tripSelect'
-import { ThemeToggle } from '../components/ThemeToggle'
 import { isValidJoinCodeFormat } from '../lib/joinCode'
 import type { Trip, Member } from '../types'
 import { Icon } from '../components/Icon'
@@ -173,8 +172,9 @@ export function Dashboard() {
           </button>
           {/* The sync badge moved down to the footer (next to the build stamp) —
               up here it crowded the user's name (Galli feedback). */}
+          {/* Night mode lives in the trip's Settings screen only — it was noise
+              up here (Galli feedback). */}
           <div className="flex items-center gap-2 shrink-0">
-            <ThemeToggle />
             <LangToggle />
             <Logo variant="emboss" size="sm" />
           </div>
