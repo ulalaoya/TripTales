@@ -11,6 +11,7 @@ import { ParticipantRow, type ParticipantDraft } from '../components/Participant
 import { TripHeader } from '../components/TripHeader'
 import { TripSettings } from '../components/TripSettings'
 import { BuildStamp } from '../components/BuildStamp'
+import { SyncDiagnostics } from '../components/SyncDiagnostics'
 
 export function People() {
   const t = useT()
@@ -129,9 +130,10 @@ export function People() {
           })}
         </ul>
 
-        {/* Build stamp — also here, not only on the home screen, so the running
-            version is easy to find from inside a trip. */}
-        <div className="mt-6">
+        {/* Sync diagnostics + build stamp — both are "what is this device
+            actually doing" information, kept together at the bottom. */}
+        <div className="mt-6 space-y-3">
+          <SyncDiagnostics />
           <BuildStamp />
         </div>
       </div>

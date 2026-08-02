@@ -73,6 +73,11 @@ let flushing = false
 let flushAgain = false
 let warnedTooBig = false
 
+// --- Diagnostics (see `cloudDiagnostics`) ---------------------------------
+let lastPushAt: number | null = null
+let lastPullAt: number | null = null
+let lastError: string | null = null
+
 /** Trip ids we have already added to this member's `memberTrips` index this session. */
 const indexedTripIds = new Set<string>()
 
@@ -99,6 +104,8 @@ function setState(next: Parameters<ReturnType<typeof useStore.getState>['setSync
 
 /** Report a cloud failure without ever breaking the local experience. */
 function reportFailure(err: unknown, toast = true): void {
+  const code = (err as { code?: string } | null)?.code
+  lastError = `${code ?? ''} ${String((err as { message?: string } | null)?.message ?? err)}`.trim().slice(0, 160)
   setState('offline')
   if (toast) useStore.getState().showToast(str('syncFailed'))
   if (import.meta.env.DEV) console.warn('[TripTales sync]', err)
@@ -383,6 +390,45 @@ function isPermissionDenied(err: unknown): boolean {
   return /permission[-\s]denied|insufficient permissions/i.test(String(err))
 }
 
+/**
+ * A snapshot of the sync layer's actual state, for diagnosing "my devices are
+ * not seeing each other". Deliberately free of personal content — trip NAMES
+ * are included because they are what makes a row recognisable, but no photos,
+ * captions, phone numbers or emails.
+ *
+ * The decisive fields:
+ *  • `trips[].id` — if two devices show DIFFERENT ids for the same trip, they
+ *    are editing two separate documents and can never converge.
+ *  • `inCloud` / `uidInMemberUids` — whether this device is actually subscribed
+ *    to that trip's document.
+ *  • `lastPushAt` / `lastPullAt` / `lastError` — whether traffic flows at all.
+ */
+export function cloudDiagnostics(): Record<string, unknown> {
+  const s = useStore.getState()
+  const me = s.currentUserId
+  const ago = (t: number | null) => (t === null ? null : `${Math.round((Date.now() - t) / 1000)}s`)
+  return {
+    cloudEnabled: isCloudEnabled,
+    started,
+    syncState: s.syncState,
+    uid: myUid ? `${myUid.slice(0, 8)}…` : null,
+    memberId: me,
+    lastPush: ago(lastPushAt),
+    lastPull: ago(lastPullAt),
+    lastError,
+    cloudTripIds: [...remoteTripDocs.keys()],
+    trips: s.trips.map((t) => ({
+      id: t.id,
+      name: t.name,
+      activities: t.days.reduce((n, d) => n + d.activities.length, 0),
+      inCloud: remoteTripDocs.has(t.id),
+      iAmInMembers: !!me && t.members.includes(me),
+      uidInMemberUids: !!myUid && (t.memberUids ?? []).includes(myUid),
+      updatedAt: t.updatedAt ?? null,
+    })),
+  }
+}
+
 /** A member identity recovered from the cloud by phone (never carries phone/email). */
 export interface RemoteIdentity {
   id: string
@@ -590,6 +636,7 @@ function mergeTrip(tripId: string): void {
    * versa, even after a refresh). Comparing content instead of clocks removes
    * that failure mode entirely for the common, conflict-free case.
    */
+  lastPullAt = Date.now()
   const local = useStore.getState().trips.find((t) => t.id === tripId)
   const localIsClean =
     !!local && tripSignature(tripToDoc(local, local.memberUids ?? [])) === tripSignatures.get(tripId)
@@ -695,6 +742,7 @@ async function pushTrip(
     try {
       const stamp = Date.now()
       await fs.setDoc(fs.doc(db, 'trips', trip.id), { ...doc, updatedAt: fs.serverTimestamp() })
+      lastPushAt = Date.now()
       tripSignatures.set(trip.id, signature)
       useStore.getState().markTripPushed(trip.id, stamp, memberUids)
       wrote = true
