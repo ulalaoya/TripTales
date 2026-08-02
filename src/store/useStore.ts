@@ -86,6 +86,13 @@ interface State {
   toggleTheme: () => void
   /** Choose the app-wide colour palette. */
   setPaletteId: (paletteId: string) => void
+  /**
+   * Trips this DEVICE deliberately removed. Deleting a trip means "leave it",
+   * and the member's cloud trip index is shared with the person's other devices
+   * — which kept re-listing it and restoring the trip straight back. Remembering
+   * what was left keeps it gone here without deleting it for the family.
+   */
+  leftTripIds: string[]
   showToast: (msg: string) => void
   clearToast: () => void
   /** Remember which day of a trip the planner is currently showing. */
@@ -249,6 +256,7 @@ export const useStore = create<State>()(
       lang: 'he',
       theme: 'light',
       paletteId: 'coral',
+      leftTripIds: [],
       members: SEED_MEMBERS,
       trips: SEED_TRIPS,
       currentUserId: null,
@@ -359,7 +367,12 @@ export const useStore = create<State>()(
           })),
         })),
 
-      deleteTrip: (id) => set((s) => ({ trips: s.trips.filter((t) => t.id !== id) })),
+      deleteTrip: (id) =>
+        set((s) => ({
+          trips: s.trips.filter((t) => t.id !== id),
+          // Remember it, so the cross-device restore never brings it back here.
+          leftTripIds: s.leftTripIds.includes(id) ? s.leftTripIds : [...s.leftTripIds, id],
+        })),
 
       reorderTrip: (id, dir) =>
         set((s) => {
@@ -398,6 +411,8 @@ export const useStore = create<State>()(
         if (trip.members.includes(me)) return { ok: false, reason: 'already' }
         set((st) => ({
           trips: editTrip(st.trips, trip.id, (t) => ({ ...t, members: [...t.members, me] })),
+          // Joining on purpose undoes an earlier "leave" on this device.
+          leftTripIds: st.leftTripIds.filter((id) => id !== trip.id),
         }))
         return { ok: true, tripId: trip.id }
       },
@@ -686,6 +701,7 @@ export const useStore = create<State>()(
         lang: s.lang,
         theme: s.theme,
         paletteId: s.paletteId,
+        leftTripIds: s.leftTripIds,
         members: s.members,
         trips: s.trips,
         currentUserId: s.currentUserId,

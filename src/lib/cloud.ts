@@ -55,6 +55,9 @@ const PUSH_DEBOUNCE_MS = 400
 /** How long the first merge waits for a trip's photo snapshot before giving up. */
 const PHOTO_WAIT_MS = 4000
 
+/** How long sign-in waits for the first trips snapshot before pushing anything. */
+const FIRST_SNAPSHOT_WAIT_MS = 6000
+
 export type CloudJoinResult =
   | { ok: true; tripId: string }
   | { ok: false; reason: 'already'; tripId: string }
@@ -74,6 +77,17 @@ let flushAgain = false
 let warnedTooBig = false
 
 // --- Diagnostics (see `cloudDiagnostics`) ---------------------------------
+/**
+ * Has the trips query delivered its first snapshot in this session?
+ *
+ * NOTHING may be pushed before it has. Otherwise a device that starts up with a
+ * stale local copy writes it straight over newer cloud data — which is exactly
+ * how an activity added on one device appeared on the other and then vanished
+ * from BOTH: the next device to start simply overwrote it.
+ */
+let tripsSnapshotSeen = false
+let firstSnapshotResolve: (() => void) | null = null
+
 let lastPushAt: number | null = null
 let lastPullAt: number | null = null
 let lastError: string | null = null
@@ -152,6 +166,31 @@ function photoSignature(p: PhotoDoc): string {
   ].join('|')
 }
 
+/**
+ * Resolve once the trips query has answered (or after a timeout, so a device
+ * that genuinely cannot reach the cloud still works offline-first).
+ */
+function waitForFirstTripsSnapshot(): Promise<void> {
+  if (tripsSnapshotSeen) return Promise.resolve()
+  return new Promise((resolve) => {
+    firstSnapshotResolve = resolve
+    setTimeout(() => {
+      // Best effort: unblock pushing so an offline-only device is not frozen.
+      tripsSnapshotSeen = true
+      firstSnapshotResolve = null
+      resolve()
+    }, FIRST_SNAPSHOT_WAIT_MS)
+  })
+}
+
+/** Mark the trips query as answered and release anything waiting on it. */
+function markTripsSnapshotSeen(): void {
+  tripsSnapshotSeen = true
+  const resolve = firstSnapshotResolve
+  firstSnapshotResolve = null
+  resolve?.()
+}
+
 /** The trips this device should mirror: mine, minus the local-only demo. */
 function myTrips(): Trip[] {
   const s = useStore.getState()
@@ -193,8 +232,9 @@ export async function cloudSignIn(): Promise<void> {
     if (restored > 0) useStore.getState().showToast(str('restoringTrips'))
     watchLocalChanges()
 
-    // First push = the migration. `myTrips()` excludes `t-flight`, so the
-    // Galilee trip (and any trip made since) goes up, the demo never does.
+    // Never push before the cloud has told us what it already holds — pushing
+    // a stale local copy first is what silently deleted other devices' edits.
+    await waitForFirstTripsSnapshot()
     await flushNow()
     if (useStore.getState().syncState !== 'offline') setState('synced')
   } catch (err) {
@@ -232,6 +272,8 @@ export function cloudStop(): void {
   pushTimer = null
   started = false
   warnedTooBig = false
+  tripsSnapshotSeen = false
+  firstSnapshotResolve = null
   myUid = null
   if (isCloudEnabled) {
     useStore.getState().setCloudUid(null)
@@ -370,8 +412,10 @@ async function restoreMyTrips(
   }
 
   let restored = 0
+  const left = new Set(useStore.getState().leftTripIds)
   for (const tripId of tripIds) {
     indexedTripIds.add(tripId) // already indexed — don't rewrite it later this session
+    if (left.has(tripId)) continue // deliberately removed on THIS device
     const existing = useStore.getState().trips.find((t) => t.id === tripId)
     if (existing?.memberUids?.includes(myUid)) continue
     try {
@@ -554,6 +598,9 @@ function subscribeTrips(database: Db, fs: FsApi): void {
     fs.onSnapshot(
       q,
       (snap) => {
+        // Mark BEFORE iterating: an empty result (no shared trips yet) is still
+        // a valid answer from the cloud and must release the push gate.
+        markTripsSnapshotSeen()
         for (const change of snap.docChanges()) {
           const tripId = change.doc.id
           if (change.type === 'removed') {
@@ -643,6 +690,10 @@ function mergeTrip(tripId: string): void {
    * that failure mode entirely for the common, conflict-free case.
    */
   lastPullAt = Date.now()
+  // A trip this device deliberately left must not reappear through the live
+  // snapshot either (another device of the same person still lists it).
+  if (useStore.getState().leftTripIds.includes(tripId)) return
+
   const local = useStore.getState().trips.find((t) => t.id === tripId)
   const localIsClean =
     !!local && tripSignature(tripToDoc(local, local.memberUids ?? [])) === tripSignatures.get(tripId)
@@ -682,6 +733,9 @@ function schedulePush(): void {
 /** Push every changed trip / photo. Never throws. */
 async function flushNow(): Promise<void> {
   if (!isCloudEnabled || !myUid) return
+  // Defensive twin of the sign-in gate: a debounced push triggered by an early
+  // local change must not run before the cloud's view has arrived either.
+  if (!tripsSnapshotSeen) return
   if (flushing) {
     flushAgain = true
     return
@@ -866,6 +920,10 @@ export async function cloudJoinByCode(rawCode: string): Promise<CloudJoinResult>
     if (!codeSnap.exists()) return { ok: false, reason: 'notfound' }
     const tripId = (codeSnap.data() as { tripId?: string }).tripId
     if (!tripId) return { ok: false, reason: 'notfound' }
+
+    // Joining on purpose undoes an earlier "leave" of this trip on this device,
+    // otherwise the merge guard would keep discarding it as it arrives.
+    useStore.setState((s) => ({ leftTripIds: s.leftTripIds.filter((id) => id !== tripId) }))
 
     // Already in the CLOUD trip's `memberUids`? Only a trip the snapshot
     // delivered because I actually belong to it carries my uid here — a local
