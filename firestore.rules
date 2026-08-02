@@ -84,7 +84,11 @@ service cloud.firestore {
 
     // -----------------------------------------------------------------------
     // members/{memberId}
-    //   { phoneHash, name, role, figure, color, uid }
+    //   { phoneHash, name, role, figure, color, uid, uids: string[] }
+    //
+    // `uid` is the most recent device to claim this member; `uids` lists EVERY
+    // device that has. One person normally signs in from several devices, so
+    // anything gated on the single `uid` would lock the rest of them out.
     //
     // NO `phone`. NO `email`. Those live only in the owning device's
     // localStorage — see the privacy note in the header.
@@ -201,10 +205,20 @@ service cloud.firestore {
     // documented at the top of this file, and grants no broader access.
     // -----------------------------------------------------------------------
     match /memberTrips/{memberId} {
+      // ONE PERSON, SEVERAL DEVICES.
+      //
+      // `members/{id}.uid` is only the most RECENT device to sign in, so gating
+      // on it alone locked every other device of the same person out of their
+      // own trip index — the phone sat permanently offline on
+      // `permission-denied` while the computer worked. `uids` accumulates every
+      // device that has claimed this member, and any of them qualifies. The
+      // legacy single `uid` is still honoured for documents written before
+      // `uids` existed.
       function ownsMember() {
+        let d = get(/databases/$(database)/documents/members/$(memberId)).data;
         return isSignedIn()
                && exists(/databases/$(database)/documents/members/$(memberId))
-               && get(/databases/$(database)/documents/members/$(memberId)).data.uid == me();
+               && ((('uids' in d) && (me() in d.uids)) || (('uid' in d) && (d.uid == me())));
       }
       allow read, write: if ownsMember();
     }

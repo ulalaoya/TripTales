@@ -282,7 +282,13 @@ async function claimMemberDoc(database: Db, fs: FsApi): Promise<void> {
       role: mine.role,
       figure: mine.figure,
       color: mine.color,
+      // `uid` is the most recent device; `uids` accumulates EVERY device this
+      // person uses. One person routinely has several (phone + computer), and
+      // gating anything on the single latest uid locks the others out — that is
+      // exactly what stopped the phone from reading its own trip index and left
+      // it permanently "offline" with permission-denied.
       uid: myUid,
+      uids: fs.arrayUnion(myUid),
     },
     { merge: true },
   )
@@ -741,7 +747,23 @@ async function pushTrip(
     setState('syncing')
     try {
       const stamp = Date.now()
-      await fs.setDoc(fs.doc(db, 'trips', trip.id), { ...doc, updatedAt: fs.serverTimestamp() })
+      const write = () => fs.setDoc(fs.doc(db, 'trips', trip.id), { ...doc, updatedAt: fs.serverTimestamp() })
+      try {
+        await write()
+      } catch (err) {
+        if (!isPermissionDenied(err) || !myUid) throw err
+        // SELF-HEAL. This device holds the trip locally, but the cloud copy does
+        // not list it among `memberUids`, so the rules refuse a full write. Join
+        // first — the single write shape a non-member IS allowed — then push
+        // again. Without this the device stays stuck on permission-denied
+        // indefinitely and the two devices silently drift apart.
+        await fs.updateDoc(fs.doc(db, 'trips', trip.id), {
+          memberUids: fs.arrayUnion(myUid),
+          members: fs.arrayUnion(memberId),
+          updatedAt: fs.serverTimestamp(),
+        })
+        await write()
+      }
       lastPushAt = Date.now()
       tripSignatures.set(trip.id, signature)
       useStore.getState().markTripPushed(trip.id, stamp, memberUids)
