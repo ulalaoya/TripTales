@@ -114,8 +114,15 @@ export interface Activity {
   loc?: string
   /** Optional free-text notes. */
   notes?: string
-  /** Optional flight/booking details attachment. */
+  /**
+   * @deprecated Superseded by `attachments` (an activity may carry several —
+   * e.g. a link to the attraction AND a link to the tickets). Kept so persisted
+   * and cloud data still type-checks; the v6→v7 migration folds it into the
+   * array. Nothing in the UI reads it.
+   */
   attachment?: ActivityAttachment
+  /** Booking links / screenshots, each shown on its own row. */
+  attachments?: ActivityAttachment[]
 }
 
 export interface Day {

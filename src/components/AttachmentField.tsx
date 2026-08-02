@@ -1,28 +1,43 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { useT } from '../i18n/useT'
 import type { ActivityAttachment } from '../types'
 import { Icon } from './Icon'
 
 interface Props {
-  value?: ActivityAttachment
-  onChange: (a: ActivityAttachment | undefined) => void
+  value: ActivityAttachment[]
+  onChange: (a: ActivityAttachment[]) => void
 }
 
 /**
- * "צירוף פרטי טיסה/הזמנה" (Galli feedback #9) — attach booking details to an
- * activity, either as an uploaded screenshot (stored as a data-URL) or as a
- * pasted confirmation link.
+ * "צירוף פרטי טיסה/הזמנה" — booking details attached to an activity.
+ *
+ * A LIST, not a single slot (Galli feedback): one activity often needs a link to
+ * the attraction AND a link to the tickets. Each attachment gets its own row.
+ *
+ * The old mode-switch was removed too: it repeated "העלאת צילום" twice — once as
+ * the selected mode and once as the action — which read as a duplicate control.
+ * Now there are simply two "add" buttons.
  */
 export function AttachmentField({ value, onChange }: Props) {
   const t = useT()
   const fileRef = useRef<HTMLInputElement>(null)
-  const [mode, setMode] = useState<'photo' | 'link'>(value?.kind ?? 'photo')
+  const list = value ?? []
+
+  function patch(index: number, next: Partial<ActivityAttachment>) {
+    onChange(list.map((a, i) => (i === index ? { ...a, ...next } : a)))
+  }
+
+  function remove(index: number) {
+    onChange(list.filter((_, i) => i !== index))
+  }
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    e.target.value = '' // allow picking the same file again later
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => onChange({ kind: 'photo', value: String(reader.result), label: file.name })
+    reader.onload = () =>
+      onChange([...list, { kind: 'photo', value: String(reader.result), label: file.name }])
     reader.readAsDataURL(file)
   }
 
@@ -30,86 +45,78 @@ export function AttachmentField({ value, onChange }: Props) {
     <div>
       <span className="block text-sm font-medium mb-1">{t('attachTitle')}</span>
 
-      <div
-        className="inline-flex rounded-[14px] overflow-hidden border border-[var(--line)] bg-white mb-2"
-        role="radiogroup"
-        aria-label={t('attachTitle')}
-      >
-        {(['photo', 'link'] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            role="radio"
-            aria-checked={mode === m}
-            onClick={() => setMode(m)}
-            className={`tap inline-flex items-center gap-1 px-3 py-2 text-xs font-medium ${
-              mode === m ? 'bg-[var(--solid)] text-[var(--on-solid)]' : 'text-[var(--ink)]'
-            }`}
-          >
-            <Icon name={m === 'photo' ? 'camera' : 'share'} size={16} />
-            {m === 'photo' ? t('attachModePhoto') : t('attachModeLink')}
-          </button>
-        ))}
-      </div>
+      {list.length > 0 && (
+        <ul className="space-y-2 mb-2">
+          {list.map((a, i) => (
+            <li key={i} className="rounded-[14px] border border-[var(--line)] bg-white p-2">
+              <div className="flex items-center gap-2">
+                {a.kind === 'photo' ? (
+                  <img
+                    src={a.value}
+                    alt={a.label ?? t('attachTitle')}
+                    style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 10 }}
+                  />
+                ) : (
+                  <Icon name="share" size={18} className="text-[var(--sea)] shrink-0" />
+                )}
 
-      {mode === 'photo' ? (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="tap inline-flex items-center gap-1 px-3 py-2 rounded-[14px] bg-white border border-[var(--line)] text-sm"
-          >
-            <Icon name="camera" size={16} />
-            {t('attachModePhoto')}
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
-          {value?.kind === 'photo' && (
-            <img
-              src={value.value}
-              alt={value.label ?? t('attachTitle')}
-              style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 12 }}
-            />
-          )}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <input
-            type="url"
-            dir="ltr"
-            value={value?.kind === 'link' ? value.value : ''}
-            onChange={(e) =>
-              onChange(
-                e.target.value.trim()
-                  ? { kind: 'link', value: e.target.value.trim(), label: value?.label }
-                  : undefined,
-              )
-            }
-            placeholder={t('attachLinkPlaceholder')}
-            aria-label={t('attachModeLink')}
-            className="tap w-full rounded-[14px] px-3 py-2 bg-white border border-[var(--line)] outline-none text-sm"
-          />
-          {value?.kind === 'link' && (
-            <input
-              value={value.label ?? ''}
-              onChange={(e) => onChange({ ...value, label: e.target.value || undefined })}
-              placeholder={t('attachLabelPlaceholder')}
-              aria-label={t('attachLabelPlaceholder')}
-              className="tap w-full rounded-[14px] px-3 py-2 bg-white border border-[var(--line)] outline-none text-sm"
-            />
-          )}
-        </div>
+                {a.kind === 'link' ? (
+                  <input
+                    type="url"
+                    dir="ltr"
+                    value={a.value}
+                    onChange={(e) => patch(i, { value: e.target.value })}
+                    placeholder={t('attachLinkPlaceholder')}
+                    aria-label={t('attachModeLink')}
+                    className="tap flex-1 min-w-0 rounded-[12px] px-2 py-1.5 bg-white border border-[var(--line)] outline-none text-sm"
+                  />
+                ) : (
+                  <span className="flex-1 min-w-0 truncate text-sm">{a.label}</span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => remove(i)}
+                  aria-label={t('attachRemove')}
+                  className="tap p-1.5 text-[var(--danger)] shrink-0"
+                >
+                  <Icon name="close" size={16} />
+                </button>
+              </div>
+
+              {a.kind === 'link' && (
+                <input
+                  value={a.label ?? ''}
+                  onChange={(e) => patch(i, { label: e.target.value || undefined })}
+                  placeholder={t('attachLabelPlaceholder')}
+                  aria-label={t('attachLabelPlaceholder')}
+                  className="tap w-full mt-2 rounded-[12px] px-2 py-1.5 bg-white border border-[var(--line)] outline-none text-sm"
+                />
+              )}
+            </li>
+          ))}
+        </ul>
       )}
 
-      {value && (
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => onChange(undefined)}
-          className="tap inline-flex items-center gap-1 mt-2 px-3 py-2 rounded-[14px] border border-[var(--line)] bg-white text-xs text-[var(--danger)]"
+          onClick={() => fileRef.current?.click()}
+          className="tap inline-flex items-center gap-1 px-3 py-2 rounded-[14px] bg-white border border-[var(--line)] text-sm"
         >
-          <Icon name="close" size={14} />
-          {t('attachRemove')}
+          <Icon name="camera" size={16} />
+          {t('attachAddPhoto')}
         </button>
-      )}
+        <button
+          type="button"
+          onClick={() => onChange([...list, { kind: 'link', value: '' }])}
+          className="tap inline-flex items-center gap-1 px-3 py-2 rounded-[14px] bg-white border border-[var(--line)] text-sm"
+        >
+          <Icon name="share" size={16} />
+          {t('attachAddLink')}
+        </button>
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
     </div>
   )
 }

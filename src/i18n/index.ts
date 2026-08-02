@@ -233,6 +233,8 @@ export const STRINGS = {
     darkMode: 'מצב לילה',
     lightMode: 'מצב יום',
     appearance: 'תצוגה',
+    attachAddPhoto: 'הוספת צילום',
+    attachAddLink: 'הוספת קישור',
     paletteAppWide: 'חלה על כל האפליקציה ועל כל הטיולים',
     backToTrips: 'חזרה לכל הטיולים',
     // ----- photo delete (Item 3) -----
@@ -476,6 +478,8 @@ export const STRINGS = {
     darkMode: 'Night mode',
     lightMode: 'Day mode',
     appearance: 'Appearance',
+    attachAddPhoto: 'Add photo',
+    attachAddLink: 'Add link',
     paletteAppWide: 'Applies to the whole app and all trips',
     backToTrips: 'Back to all trips',
     // ----- photo delete (Item 3) -----

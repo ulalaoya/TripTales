@@ -52,6 +52,9 @@ export const LOCAL_ONLY_TRIP_IDS = ['t-flight']
 /** How long to coalesce local edits before pushing. */
 const PUSH_DEBOUNCE_MS = 400
 
+/** How long the first merge waits for a trip's photo snapshot before giving up. */
+const PHOTO_WAIT_MS = 4000
+
 export type CloudJoinResult =
   | { ok: true; tripId: string }
   | { ok: false; reason: 'already'; tripId: string }
@@ -527,6 +530,14 @@ function subscribeTrips(database: Db, fs: FsApi): void {
 
 function subscribePhotos(database: Db, fs: FsApi, tripId: string): void {
   if (photoUnsubs.has(tripId)) return
+
+  /** Unblock merging for this trip when its photos cannot be obtained. */
+  const proceedWithoutPhotos = () => {
+    if (remotePhotos.has(tripId)) return
+    remotePhotos.set(tripId, new Map())
+    mergeTrip(tripId)
+  }
+
   const un = fs.onSnapshot(
     fs.collection(database, 'trips', tripId, 'photos'),
     (snap) => {
@@ -538,9 +549,17 @@ function subscribePhotos(database: Db, fs: FsApi, tripId: string): void {
       remotePhotos.set(tripId, map)
       mergeTrip(tripId)
     },
-    (err) => reportFailure(err, false),
+    (err) => {
+      // A failing photo listener must never freeze the whole trip's sync — the
+      // first merge waits for photos, so without this the trip would stop
+      // receiving activity/day updates entirely.
+      proceedWithoutPhotos()
+      reportFailure(err, false)
+    },
   )
   photoUnsubs.set(tripId, un)
+  // Same safety net for a snapshot that simply never arrives.
+  setTimeout(proceedWithoutPhotos, PHOTO_WAIT_MS)
 }
 
 /** Rebuild one trip from its remote document + photos and merge it locally. */
@@ -556,7 +575,26 @@ function mergeTrip(tripId: string): void {
   const trip = docToTrip(normalised, photos as Array<{ id: string; dayId: string }>)
   trip.memberUids = memberUidsOfDoc(raw)
 
-  useStore.getState().applyRemoteTrip(trip)
+  /*
+   * Does this device have UNPUSHED local changes to the trip?
+   *
+   * `tripSignatures` holds the last document we pushed or received, so a local
+   * copy that still matches it has nothing of its own to protect — in that case
+   * the cloud is simply the truth and is adopted outright.
+   *
+   * This matters because the last-write-wins comparison uses `updatedAt`, and
+   * the local side of that stamp is a CLIENT clock. A device running even a few
+   * minutes fast would otherwise judge its own stale copy "newer" than every
+   * incoming update and ignore the family's changes indefinitely (Galli: an
+   * activity added on the phone never showed up on the computer, and vice
+   * versa, even after a refresh). Comparing content instead of clocks removes
+   * that failure mode entirely for the common, conflict-free case.
+   */
+  const local = useStore.getState().trips.find((t) => t.id === tripId)
+  const localIsClean =
+    !!local && tripSignature(tripToDoc(local, local.memberUids ?? [])) === tripSignatures.get(tripId)
+
+  useStore.getState().applyRemoteTrip(trip, localIsClean)
 
   // Record the REMOTE signatures: if the merge kept the local copy (because it
   // was newer) the signatures will differ and the watcher pushes it, which is

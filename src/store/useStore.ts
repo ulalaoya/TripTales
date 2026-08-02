@@ -182,7 +182,12 @@ interface State {
   /** Upsert member documents that arrived from Firestore (never phone/email). */
   applyRemoteMembers: (incoming: RemoteMember[]) => void
   /** Merge one trip that arrived from Firestore (last-write-wins on updatedAt). */
-  applyRemoteTrip: (trip: Trip) => void
+  /**
+   * Merge one trip that arrived from Firestore.
+   * `force` means "this device has no unpushed changes", so the cloud copy is
+   * adopted without consulting the (client-clock based) `updatedAt` stamps.
+   */
+  applyRemoteTrip: (trip: Trip, force?: boolean) => void
   /** Record the cloud bookkeeping fields after a successful push. */
   markTripPushed: (tripId: string, updatedAt: number, memberUids: string[]) => void
 }
@@ -640,7 +645,7 @@ export const useStore = create<State>()(
           return { members: [...byId.values()] }
         }),
 
-      applyRemoteTrip: (trip) =>
+      applyRemoteTrip: (trip, force) =>
         set((s) => {
           if (!trip?.id) return {}
           const local = s.trips.find((t) => t.id === trip.id)
@@ -648,7 +653,8 @@ export const useStore = create<State>()(
             const order = s.trips.reduce((mx, x) => Math.max(mx, x.order), -1) + 1
             return { trips: [...s.trips, { ...trip, order: trip.order ?? order }] }
           }
-          const winner = pickNewer(local, trip)
+          // Nothing local to protect → the cloud wins, whatever the clocks say.
+          const winner = force ? trip : pickNewer(local, trip)
           if (!winner || winner === local) {
             // Local content wins, but always absorb the cloud's membership set.
             return { trips: mapTrip(s.trips, trip.id, (t) => ({ ...t, memberUids: trip.memberUids ?? t.memberUids })) }
@@ -668,7 +674,7 @@ export const useStore = create<State>()(
     }),
     {
       name: 'triptales-store',
-      version: 6,
+      version: 7,
       // IndexedDB, not localStorage: photos (base64) blow localStorage's ~5 MB
       // quota, and its synchronous `setItem` threw QuotaExceededError mid-render.
       // `idbStorage` also migrates any existing localStorage data on first read.
@@ -723,6 +729,21 @@ export const useStore = create<State>()(
           // Remove ONLY the fixed Santorini demo id; user trips carry generated
           // ids (`t-<base36>-<n>`) and can never match this literal.
           state.trips = state.trips.filter((t) => t.id !== 't-flight')
+        }
+        if (version < 7 && Array.isArray(state.trips)) {
+          // A single `attachment` became a LIST, so an activity can carry both a
+          // link to the attraction and a link to the tickets.
+          state.trips = state.trips.map((t) => ({
+            ...t,
+            days: (t.days ?? []).map((d) => ({
+              ...d,
+              activities: (d.activities ?? []).map((a) => {
+                if (a.attachments || !a.attachment) return a
+                const { attachment, ...rest } = a
+                return { ...rest, attachments: [attachment] }
+              }),
+            })),
+          }))
         }
         if (version < 6) {
           // The palette became APP-WIDE. Lift whatever a trip already carried

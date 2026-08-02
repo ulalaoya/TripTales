@@ -419,7 +419,9 @@ function ActivityCard({
     disabled: !canPlan,
   })
   const [editing, setEditing] = useState(false)
-  const [lightbox, setLightbox] = useState(false)
+  /** Data-URL of the attachment shown full-screen, or null. */
+  const [lightbox, setLightbox] = useState<string | null>(null)
+  const attachments = activity.attachments ?? (activity.attachment ? [activity.attachment] : [])
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -482,62 +484,69 @@ function ActivityCard({
           </span>
           <h4 className="font-hand text-lg truncate">{activity.title}</h4>
         </div>
+        {/* Location on its OWN line — links used to sit flush beside it. */}
         {activity.loc && (
-          <a
-            href={locationHref(activity.loc)}
-            target="_blank"
-            rel="noopener"
-            className="tap-chip gap-1 mt-1 text-xs text-[var(--sea)] font-semibold"
-          >
-            <Icon name="mapPin" size={14} />
-            <bdi>{locationLabel(activity.loc)}</bdi>
-          </a>
+          <div className="mt-1">
+            <a
+              href={locationHref(activity.loc)}
+              target="_blank"
+              rel="noopener"
+              className="tap-chip gap-1 text-xs text-[var(--sea)] font-semibold"
+            >
+              <Icon name="mapPin" size={14} />
+              <bdi>{locationLabel(activity.loc)}</bdi>
+            </a>
+          </div>
         )}
         {activity.notes && <p className="text-xs text-[var(--muted)] mt-1">{activity.notes}</p>}
 
-        {/* Attachment — thumbnail (photo) or chip link */}
-        {activity.attachment?.kind === 'photo' && (
-          <button
-            type="button"
-            onClick={() => setLightbox(true)}
-            aria-label={activity.attachment.label ?? t('attachTitle')}
-            className="tap mt-2 block rounded-[12px] overflow-hidden border border-[var(--line)]"
-          >
-            <img
-              src={activity.attachment.value}
-              alt={activity.attachment.label ?? t('attachTitle')}
-              style={{ width: 64, height: 64, objectFit: 'cover', display: 'block' }}
-            />
-          </button>
+        {/* Attachments — EACH on its own row (an activity can have several). */}
+        {attachments.map((att, i) =>
+          att.kind === 'photo' ? (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setLightbox(att.value)}
+              aria-label={att.label ?? t('attachTitle')}
+              className="tap mt-2 block rounded-[12px] overflow-hidden border border-[var(--line)]"
+            >
+              <img
+                src={att.value}
+                alt={att.label ?? t('attachTitle')}
+                style={{ width: 64, height: 64, objectFit: 'cover', display: 'block' }}
+              />
+            </button>
+          ) : (
+            <div key={i} className="mt-1.5">
+              <a
+                href={att.value}
+                target="_blank"
+                rel="noopener"
+                className="tap-chip gap-1 text-xs text-[var(--sea)] font-semibold"
+              >
+                <Icon name="share" size={14} />
+                <bdi>{att.label || t('attachOpenLink')}</bdi>
+              </a>
+            </div>
+          ),
         )}
-        {activity.attachment?.kind === 'link' && (
-          <a
-            href={activity.attachment.value}
-            target="_blank"
-            rel="noopener"
-            className="tap-chip gap-1 mt-1.5 text-xs text-[var(--sea)] font-semibold"
-          >
-            <Icon name="share" size={14} />
-            <bdi>{activity.attachment.label || t('attachOpenLink')}</bdi>
-          </a>
-        )}
-        {lightbox && activity.attachment?.kind === 'photo' && (
+        {lightbox && (
           <div
             role="dialog"
             aria-modal="true"
-            aria-label={activity.attachment.label ?? t('attachTitle')}
-            onClick={() => setLightbox(false)}
+            aria-label={t('attachTitle')}
+            onClick={() => setLightbox(null)}
             className="fixed inset-0 z-50 grid place-items-center p-5"
             style={{ background: 'rgba(23, 31, 48, .82)' }}
           >
             <img
-              src={activity.attachment.value}
-              alt={activity.attachment.label ?? t('attachTitle')}
+              src={lightbox}
+              alt={t('attachTitle')}
               style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: 14 }}
             />
             <button
               type="button"
-              onClick={() => setLightbox(false)}
+              onClick={() => setLightbox(null)}
               aria-label={t('cancel')}
               className="tap absolute top-4 p-2 text-white"
               style={{ insetInlineEnd: 16 }}
@@ -597,7 +606,9 @@ function ActivityForm({
   const [icon, setIcon] = useState(initial?.icon ?? '')
   const [loc, setLoc] = useState(initial?.loc ?? '')
   const [notes, setNotes] = useState(initial?.notes ?? '')
-  const [attachment, setAttachment] = useState<ActivityAttachment | undefined>(initial?.attachment)
+  const [attachments, setAttachments] = useState<ActivityAttachment[]>(
+    initial?.attachments ?? (initial?.attachment ? [initial.attachment] : []),
+  )
   const [open, setOpen] = useState(!!initial)
 
   /** Reset every field back to empty (shared by cancel and by a fresh add). */
@@ -607,7 +618,7 @@ function ActivityForm({
     setIcon('')
     setLoc('')
     setNotes('')
-    setAttachment(undefined)
+    setAttachments([])
   }
 
   /**
@@ -633,7 +644,8 @@ function ActivityForm({
       icon: icon || undefined,
       loc: loc.trim() || undefined,
       notes: notes.trim() || undefined,
-      attachment,
+      // Drop half-typed empty links so an unfinished row is never saved.
+      attachments: attachments.filter((a) => a.value.trim()),
     })
     if (!initial) {
       reset()
@@ -706,7 +718,7 @@ function ActivityForm({
         className="tap w-full rounded-[14px] px-3 py-2 bg-white border border-[var(--line)] outline-none text-sm"
       />
 
-      <AttachmentField value={attachment} onChange={setAttachment} />
+      <AttachmentField value={attachments} onChange={setAttachments} />
 
       <div className="flex gap-2">
         <button type="submit" className="primary-btn tap px-4 text-sm">
