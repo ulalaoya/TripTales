@@ -14,14 +14,21 @@
 //
 // HOW IT GETS PERMISSION
 // ----------------------
-// It signs in anonymously and self-joins using the trip's 6-character join
-// code — exactly the path a cousin who was sent the code would take (see the
-// JOIN EXCEPTION in firestore.rules). No admin credentials, no service
-// account: if you do not have the code, you cannot purge the trip.
+// It signs in anonymously and self-joins the trip — exactly the path a cousin
+// who was sent the join code would take (see the JOIN EXCEPTION in
+// firestore.rules). No admin credentials, no service account.
 //
 // USAGE
 //   node scripts/purge-trip.mjs ABC123            # dry run — reports only
 //   node scripts/purge-trip.mjs ABC123 --confirm  # actually deletes
+//
+// If the trip is no longer on any of your devices you cannot read its join
+// code, so target it by document id instead. Note what this implies: the
+// isSelfJoin() rule inspects only the SHAPE of the update, never the code, so
+// the trip id alone is sufficient to join. Pair it with --expect, which
+// aborts (and undoes the self-join) unless the trip's name matches:
+//
+//   node scripts/purge-trip.mjs --trip-id t-abc123 --expect "טיול נסיון 2" --confirm
 //
 // Reads the Firebase web config from .env.local (same values the app uses).
 // ===========================================================================
@@ -33,6 +40,7 @@ import { fileURLToPath } from 'node:url'
 import { initializeApp } from 'firebase/app'
 import { getAuth, signInAnonymously } from 'firebase/auth'
 import {
+  arrayRemove,
   arrayUnion,
   deleteDoc,
   doc,
@@ -75,10 +83,27 @@ const config = {
 
 const args = process.argv.slice(2)
 const confirm = args.includes('--confirm')
-const codes = args.filter((a) => !a.startsWith('--')).map((a) => a.trim().toUpperCase())
+const byId = args.includes('--trip-id')
 
-if (codes.length === 0) {
-  console.error('usage: node scripts/purge-trip.mjs <JOINCODE> [<JOINCODE>...] [--confirm]')
+/** Value of a `--flag value` pair, or undefined. */
+function flagValue(name) {
+  const i = args.indexOf(name)
+  return i >= 0 ? args[i + 1] : undefined
+}
+
+// A guard rail, because a purge cannot be undone. When given, the trip's name
+// must contain this text or the script refuses to delete and undoes its own
+// self-join. Strongly recommended with --trip-id, where a mistyped id would
+// otherwise point at a real family trip.
+const expect = flagValue('--expect')
+
+const targets = args
+  .filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--expect')
+  .map((a) => (byId ? a.trim() : a.trim().toUpperCase()))
+
+if (targets.length === 0) {
+  console.error('usage: node scripts/purge-trip.mjs <JOINCODE>... [--confirm]')
+  console.error('       node scripts/purge-trip.mjs --trip-id <TRIPID>... --expect <name> [--confirm]')
   process.exit(1)
 }
 if (!config.apiKey || !config.projectId) {
@@ -98,15 +123,23 @@ console.log('')
 
 let failures = 0
 
-for (const code of codes) {
-  console.log(`── ${code} ──────────────────────────────`)
+for (const target of targets) {
+  console.log(`── ${target} ──────────────────────────────`)
   try {
-    const codeSnap = await getDoc(doc(db, 'joinCodes', code))
-    if (!codeSnap.exists()) {
-      console.log('  join code not found — nothing to do')
-      continue
+    // Resolve the target to a trip. With --trip-id it IS the trip; otherwise
+    // the join code is looked up. `codeSnap` stays null in the former case —
+    // a trip whose code we never learned simply keeps its dangling code entry,
+    // which resolves to a deleted document and is harmless.
+    let codeSnap = null
+    let tripId = target
+    if (!byId) {
+      codeSnap = await getDoc(doc(db, 'joinCodes', target))
+      if (!codeSnap.exists()) {
+        console.log('  join code not found — nothing to do')
+        continue
+      }
+      tripId = codeSnap.data().tripId
     }
-    const tripId = codeSnap.data().tripId
     const tripRef = doc(db, 'trips', tripId)
     console.log(`  trip id : ${tripId}`)
 
@@ -124,20 +157,43 @@ for (const code of codes) {
         console.log('  not a member yet — would self-join, then delete photos + trip + code')
         continue
       }
-      await updateDoc(tripRef, { memberUids: arrayUnion(uid) })
+      // A self-join onto a missing document is refused rather than reported as
+      // "not found" — the rule needs a `resource` to compare against — so an
+      // already-purged trip surfaces here as permission-denied.
+      const joined = await updateDoc(tripRef, { memberUids: arrayUnion(uid) }).then(
+        () => true,
+        (err) => {
+          if (err?.code === 'permission-denied') return false
+          throw err
+        },
+      )
+      if (!joined) {
+        console.log('  no such trip, or it is already deleted — nothing to do')
+        continue
+      }
       console.log('  self-joined')
       tripSnap = await getDoc(tripRef)
     }
 
     if (!tripSnap.exists()) {
-      console.log('  trip already gone; removing the dangling code')
-      if (confirm) await deleteDoc(codeSnap.ref)
+      console.log('  trip already gone')
+      if (confirm && codeSnap) await deleteDoc(codeSnap.ref)
       continue
     }
 
     const trip = tripSnap.data()
     console.log(`  name    : ${trip.name}`)
     console.log(`  members : ${(trip.memberUids || []).length} device(s)`)
+
+    // Refuse to destroy something that is not what the caller described, and
+    // hand back the membership we just took so the trip is left as we found it.
+    if (expect && !String(trip.name || '').includes(expect)) {
+      console.log(`  ABORTED — name does not contain "${expect}". Nothing deleted.`)
+      await updateDoc(tripRef, { memberUids: arrayRemove(uid) })
+      console.log('  self-join undone')
+      failures++
+      continue
+    }
 
     // Photos first: their rule reads the parent trip's memberUids, so they
     // become unreachable the moment the trip document goes.
@@ -149,8 +205,10 @@ for (const code of codes) {
     }
     for (const p of photos.docs) await deleteDoc(p.ref)
 
-    // Join code before the trip: deleting it requires reading the trip.
-    await deleteDoc(codeSnap.ref)
+    // Join code before the trip: deleting it requires reading the trip. When
+    // targeting by id we only learn the code from the trip document itself.
+    const codeRef = codeSnap ? codeSnap.ref : trip.joinCode ? doc(db, 'joinCodes', String(trip.joinCode).toUpperCase()) : null
+    if (codeRef) await deleteDoc(codeRef).catch(() => console.log('  (join code already absent)'))
     await deleteDoc(tripRef)
     console.log('  DELETED')
   } catch (err) {
