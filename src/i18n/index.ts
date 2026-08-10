@@ -127,6 +127,7 @@ export const STRINGS = {
     saveMoment: 'שמירת הרגע',
     momentSaved: 'הרגע נשמר',
     photoRequired: 'צריך לבחור תמונה',
+    photoProcessing: 'מכינים את התמונה…',
     // ----- family -----
     familyOf: (name: string) => `המשפחה של ${name}`,
     travellersCount: (n: number) => `${n} מטיילים`,
@@ -382,6 +383,7 @@ export const STRINGS = {
     saveMoment: 'Save the moment',
     momentSaved: 'Moment saved',
     photoRequired: 'Please choose a photo',
+    photoProcessing: 'Preparing the photo…',
     // ----- family -----
     familyOf: (name: string) => `${name}'s family`,
     travellersCount: (n: number) => `${n} travellers`,

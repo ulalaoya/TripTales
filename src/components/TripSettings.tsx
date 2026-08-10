@@ -4,8 +4,7 @@ import { useT } from '../i18n/useT'
 import { coverPhotoOf } from '../lib/tripCover'
 import { PALETTES } from '../lib/palettes'
 import { daysLostWithContent } from '../lib/days'
-import { isCloudEnabled } from '../lib/firebase'
-import { compressDataUrl } from '../lib/compressImage'
+import { readImageFile } from '../lib/readImageFile'
 import type { Trip, Photo, Transport } from '../types'
 import { Icon } from './Icon'
 import { ThemeToggle } from './ThemeToggle'
@@ -37,6 +36,7 @@ export function TripSettings({ trip }: { trip: Trip }) {
   const [end, setEnd] = useState(trip.endDate)
   const [confirm, setConfirm] = useState<number | null>(null)
   const [coverOpen, setCoverOpen] = useState(false)
+  const [reading, setReading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Every approved photo across the trip's album — the cover candidates.
@@ -59,10 +59,9 @@ export function TripSettings({ trip }: { trip: Trip }) {
     e.target.value = '' // let the same file be chosen again later
     const firstDay = trip.days[0]
     if (!file || !member || !firstDay) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const raw = String(reader.result)
-      const store = (dataUrl: string) => {
+    setReading(true)
+    readImageFile(file)
+      .then((dataUrl) => {
         // `general: true` → shown under "כללי" in the album, not under day 1.
         const status = addPhoto(
           trip.id,
@@ -71,11 +70,9 @@ export function TripSettings({ trip }: { trip: Trip }) {
           member.role,
         )
         showToast(status === 'pending' ? t('sentForApproval') : t('momentSaved'))
-      }
-      if (isCloudEnabled) compressDataUrl(raw).then(store).catch(() => store(raw))
-      else store(raw)
-    }
-    reader.readAsDataURL(file)
+      })
+      .catch(() => showToast(t('photoRequired')))
+      .finally(() => setReading(false))
   }
 
   function commitName() {
@@ -150,10 +147,12 @@ export function TripSettings({ trip }: { trip: Trip }) {
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
+          disabled={reading}
+          aria-busy={reading}
           className="secondary-btn tap w-full inline-flex items-center justify-center gap-2 py-2.5 text-sm"
         >
           <Icon name="camera" size={18} />
-          {t('addTripPhoto')}
+          {reading ? t('photoProcessing') : t('addTripPhoto')}
         </button>
       </div>
 

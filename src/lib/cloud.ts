@@ -38,6 +38,7 @@ import type { Unsubscribe } from 'firebase/firestore'
 import { getCloudSdk, isCloudEnabled, type Db, type FsApi } from './firebase'
 import { useStore } from '../store/useStore'
 import { docToTrip, memberUidsOfDoc, photosOfTrip, tripToDoc, type PhotoDoc } from './firestoreMap'
+import { compressDataUrl } from './compressImage'
 import { withinFirestoreLimit } from './imageSize'
 import { normalizeJoinCode } from './joinCode'
 import { normalizePhone } from './phone'
@@ -99,6 +100,18 @@ const indexedTripIds = new Set<string>()
 const tripSignatures = new Map<string, string>()
 /** `${tripId}/${photoId}` → signature of the photo doc we last wrote/received. */
 const photoSignatures = new Map<string, string>()
+/**
+ * `${tripId}/${photoId}` → signature of a photo we could NOT get under the
+ * Firestore budget, even after downscaling it here.
+ *
+ * Deliberately a separate map from `photoSignatures`: that one means "this is
+ * in the cloud", and writing an un-synced photo into it — which is what this
+ * code used to do — made an oversized photo invisible to the rest of the family
+ * FOREVER, because the next push saw a matching signature and skipped it. This
+ * map only suppresses re-downscaling the same bytes over and over within a
+ * session; `reset()` clears it, so a later session tries again.
+ */
+const oversizedPhotos = new Map<string, string>()
 
 const photoUnsubs = new Map<string, Unsubscribe>()
 const remoteTripDocs = new Map<string, Record<string, unknown>>()
@@ -265,6 +278,7 @@ export function cloudStop(): void {
   remotePhotos.clear()
   tripSignatures.clear()
   photoSignatures.clear()
+  oversizedPhotos.clear()
   indexedTripIds.clear()
   if (unwatchStore) unwatchStore()
   unwatchStore = null
@@ -840,27 +854,51 @@ async function pushTrip(
     if (photoSignatures.get(key) === signature) continue
 
     const src = typeof photo.src === 'string' ? photo.src : ''
+    let photoDoc = photo
     if (src && !withinFirestoreLimit(src)) {
-      // Too big for one Firestore document: keep it local, say so once.
-      if (!warnedTooBig) {
-        warnedTooBig = true
-        useStore.getState().showToast(str('syncPhotoTooBig'))
+      // Already established this exact photo cannot be shrunk enough — don't
+      // burn a canvas re-encode on it again this session.
+      if (oversizedPhotos.get(key) === signature) continue
+
+      // SALVAGE. The photo is over the budget, which for anything added before
+      // every upload surface downscaled (and for anything a failed compression
+      // let through) is the normal case. Downscale it HERE rather than giving
+      // up: the family sees the photo, and the full-quality original stays
+      // untouched on the device that took it.
+      const shrunk = await compressDataUrl(src)
+      if (withinFirestoreLimit(shrunk)) {
+        photoDoc = { ...photo, src: shrunk }
+      } else {
+        // Genuinely un-syncable: keep it local, say so once, and leave the
+        // signature OUT of `photoSignatures` so a later session can retry.
+        oversizedPhotos.set(key, signature)
+        if (!warnedTooBig) {
+          warnedTooBig = true
+          useStore.getState().showToast(str('syncPhotoTooBig'))
+        }
+        continue
       }
-      photoSignatures.set(key, signature)
-      continue
     }
 
     setState('syncing')
     try {
       await fs.setDoc(fs.doc(db, 'trips', trip.id, 'photos', photo.id), {
-        ...photo,
+        ...photoDoc,
         updatedAt: fs.serverTimestamp(),
       })
       photoSignatures.set(key, signature)
+      oversizedPhotos.delete(key)
       wrote = true
     } catch (err) {
       reportFailure(err, false)
     }
+  }
+
+  // An oversized photo that has since been deleted locally never reached the
+  // cloud, so there is nothing to delete there — just drop the retry record.
+  for (const key of [...oversizedPhotos.keys()]) {
+    if (!key.startsWith(`${trip.id}/`)) continue
+    if (!livePhotoIds.has(key.slice(trip.id.length + 1))) oversizedPhotos.delete(key)
   }
 
   // Photos removed locally (rejected by a parent) are removed in the cloud too.

@@ -24,6 +24,7 @@ import { canPlanTrip, isTripMember } from '../lib/tripPermissions'
 import { dayTabLabel, weekdayParts } from '../lib/dayFormat'
 import { sortActivitiesByTime } from '../lib/sortActivities'
 import { initialDayIndex, todayISO } from '../lib/tripSelect'
+import { readImageFile } from '../lib/readImageFile'
 import type { Day, Activity, ActivityAttachment, Member, Photo } from '../types'
 import { Icon } from '../components/Icon'
 import { LocationField } from '../components/LocationField'
@@ -376,21 +377,33 @@ function DayTitle({
 /** "הוספת תמונה" straight from the planner — same permissions as the + tab. */
 function DayPhotoButton({ t, onPick }: { t: ReturnType<typeof useT>; onPick: (dataUrl: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const [reading, setReading] = useState(false)
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => onPick(String(reader.result))
-    reader.readAsDataURL(file)
     e.target.value = ''
+    if (!file) return
+    setReading(true)
+    // Goes through `readImageFile` like every other upload surface — this path
+    // used to skip downscaling, so a full-size photo added from the planner
+    // never made it past the Firestore document limit.
+    readImageFile(file)
+      .then(onPick)
+      .catch(() => undefined)
+      .finally(() => setReading(false))
   }
 
   return (
     <>
-      <button type="button" onClick={() => fileRef.current?.click()} className="add-card tap">
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        disabled={reading}
+        aria-busy={reading}
+        className="add-card tap"
+      >
         <Icon name="camera" size={18} />
-        {t('addPhoto')}
+        {reading ? t('photoProcessing') : t('addPhoto')}
       </button>
       <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
     </>

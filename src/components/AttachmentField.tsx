@@ -1,5 +1,6 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useT } from '../i18n/useT'
+import { readImageFile } from '../lib/readImageFile'
 import type { ActivityAttachment } from '../types'
 import { Icon } from './Icon'
 
@@ -21,7 +22,14 @@ interface Props {
 export function AttachmentField({ value, onChange }: Props) {
   const t = useT()
   const fileRef = useRef<HTMLInputElement>(null)
+  const [reading, setReading] = useState(false)
   const list = value ?? []
+
+  // Reading + downscaling is async, so the `list` captured when the file was
+  // chosen can be stale by the time it resolves — appending to it would drop a
+  // link added in the meantime. Always append to the LATEST list.
+  const listRef = useRef(list)
+  listRef.current = list
 
   function patch(index: number, next: Partial<ActivityAttachment>) {
     onChange(list.map((a, i) => (i === index ? { ...a, ...next } : a)))
@@ -35,10 +43,16 @@ export function AttachmentField({ value, onChange }: Props) {
     const file = e.target.files?.[0]
     e.target.value = '' // allow picking the same file again later
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () =>
-      onChange([...list, { kind: 'photo', value: String(reader.result), label: file.name }])
-    reader.readAsDataURL(file)
+    setReading(true)
+    // Goes through `readImageFile` like every other upload surface — this path
+    // used to skip downscaling, so a full-size booking screenshot never made it
+    // past the Firestore document limit.
+    readImageFile(file)
+      .then((dataUrl) =>
+        onChange([...listRef.current, { kind: 'photo', value: dataUrl, label: file.name }]),
+      )
+      .catch(() => undefined)
+      .finally(() => setReading(false))
   }
 
   return (
@@ -102,10 +116,12 @@ export function AttachmentField({ value, onChange }: Props) {
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
+          disabled={reading}
+          aria-busy={reading}
           className="tap inline-flex items-center gap-1 px-3 py-2 rounded-[14px] bg-white border border-[var(--line)] text-sm"
         >
           <Icon name="camera" size={16} />
-          {t('attachAddPhoto')}
+          {reading ? t('photoProcessing') : t('attachAddPhoto')}
         </button>
         <button
           type="button"

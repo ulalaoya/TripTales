@@ -4,8 +4,7 @@ import { useStore, useCurrentMember } from '../store/useStore'
 import { useT } from '../i18n/useT'
 import { todayISO } from '../lib/tripSelect'
 import { dayTabLabel } from '../lib/dayFormat'
-import { isCloudEnabled } from '../lib/firebase'
-import { compressDataUrl } from '../lib/compressImage'
+import { readImageFile } from '../lib/readImageFile'
 import { ALLOWED_EMOJIS } from '../lib/reactions'
 import type { Member } from '../types'
 import { Icon } from '../components/Icon'
@@ -48,29 +47,22 @@ export function Moment() {
     return (trip.days.find((d) => d.date === today) ?? trip.days[trip.days.length - 1]).id
   })
   const [error, setError] = useState('')
+  // Reading + downscaling a phone photo takes real time. Without this the
+  // dropzone stayed empty and silent, so it looked like the tap did nothing.
+  const [reading, setReading] = useState(false)
 
   if (!trip) return <Navigate to="/trips" replace />
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    e.target.value = '' // let the same file be chosen again later
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const raw = String(reader.result)
-      // In LOCAL mode the photo is stored byte-for-byte as it is today.
-      // In cloud mode it is downscaled first so it fits one Firestore document
-      // (max 1000px long edge, JPEG q0.6) — `compressDataUrl` falls back to the
-      // original on any failure, so a photo is never lost to compression.
-      if (!isCloudEnabled) {
-        setDataUrl(raw)
-        return
-      }
-      // Never let a compression failure block adding the photo (or bubble into a
-      // white screen) — fall back to the original bytes.
-      compressDataUrl(raw).then(setDataUrl).catch(() => setDataUrl(raw))
-    }
-    reader.onerror = () => setError(t('photoRequired'))
-    reader.readAsDataURL(file)
+    setError('')
+    setReading(true)
+    readImageFile(file)
+      .then(setDataUrl)
+      .catch(() => setError(t('photoRequired')))
+      .finally(() => setReading(false))
   }
 
   function togglePerson(id: string) {
@@ -114,10 +106,19 @@ export function Moment() {
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className={`dropzone tap ${dataUrl ? 'has-photo' : ''}`}
+            disabled={reading}
+            aria-busy={reading}
+            className={`dropzone tap ${dataUrl && !reading ? 'has-photo' : ''}`}
             aria-label={t('addPhotoVideo')}
           >
-            {dataUrl ? (
+            {reading ? (
+              <>
+                <span className="bubble">
+                  <Icon name="album" size={22} />
+                </span>
+                <strong className="text-[var(--ink)] text-sm">{t('photoProcessing')}</strong>
+              </>
+            ) : dataUrl ? (
               <img src={dataUrl} alt={caption || t('addPhotoVideo')} />
             ) : (
               <>
