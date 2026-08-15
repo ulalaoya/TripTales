@@ -12,6 +12,7 @@ import { TripHeader } from '../components/TripHeader'
 import { TripSettings } from '../components/TripSettings'
 import { BuildStamp } from '../components/BuildStamp'
 import { SyncDiagnostics } from '../components/SyncDiagnostics'
+import { BackupPanel } from '../components/BackupPanel'
 
 export function People() {
   const t = useT()
@@ -133,6 +134,7 @@ export function People() {
         {/* Sync diagnostics + build stamp — both are "what is this device
             actually doing" information, kept together at the bottom. */}
         <div className="mt-6 space-y-3">
+          <BackupPanel />
           <SyncDiagnostics />
           <BuildStamp />
         </div>

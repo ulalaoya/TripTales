@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams, useNavigate } from 'react-router-dom'
 import { useStore } from './store/useStore'
 import { cloudSignIn, cloudStop } from './lib/cloud'
+import { snapshotBeforeSync } from './lib/localBackup'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { paletteVars, PALETTE_VAR_NAMES } from './lib/palettes'
 import { TripBottomNav } from './components/BottomNav'
@@ -86,8 +87,16 @@ function TripLayout() {
  */
 function useCloudSession(currentUserId: string | null) {
   useEffect(() => {
-    if (currentUserId) void cloudSignIn()
-    else cloudStop()
+    if (!currentUserId) {
+      cloudStop()
+      return
+    }
+    // ORDER MATTERS. The local state is copied aside BEFORE sync is allowed to
+    // run, so a merge that destroys something always leaves the pre-merge copy
+    // on the device. A failed snapshot must not block sign-in, hence `finally`.
+    void snapshotBeforeSync().finally(() => {
+      void cloudSignIn()
+    })
   }, [currentUserId])
 }
 

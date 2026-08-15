@@ -39,6 +39,27 @@ function run<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequ
   )
 }
 
+/**
+ * When frozen, `setItem` becomes a no-op.
+ *
+ * A restore writes the recovered state straight into the store and then reloads
+ * the page. In between, the LIVE Zustand store is still hydrated with the state
+ * being replaced, and any change at all — even showing a toast — makes `persist`
+ * write that stale copy back on top of the restore. Freezing closes that window;
+ * `rawSetItem` is the one door left open, for the restore itself.
+ */
+let frozen = false
+
+/** Stop `setItem` from writing. There is no unfreeze — the caller reloads. */
+export function freezePersistence(): void {
+  frozen = true
+}
+
+/** Write regardless of the freeze. Only the backup/restore layer may use this. */
+export function rawSetItem(name: string, value: string): Promise<void> {
+  return run<void>('readwrite', (s) => s.put(value, name)).then(() => undefined)
+}
+
 export const idbStorage = {
   getItem: async (name: string): Promise<string | null> => {
     try {
@@ -63,6 +84,7 @@ export const idbStorage = {
   },
 
   setItem: async (name: string, value: string): Promise<void> => {
+    if (frozen) return
     try {
       await run('readwrite', (s) => s.put(value, name))
     } catch (err) {
@@ -77,6 +99,19 @@ export const idbStorage = {
       await run('readwrite', (s) => s.delete(name))
     } catch {
       /* ignore */
+    }
+  },
+
+  /**
+   * Every key in the store. Zustand's `persist` never needs this; the local
+   * backup layer does, to enumerate the snapshots it has taken.
+   */
+  keys: async (): Promise<string[]> => {
+    try {
+      const k = await run<IDBValidKey[]>('readonly', (s) => s.getAllKeys())
+      return k.map(String)
+    } catch {
+      return []
     }
   },
 }
