@@ -25,7 +25,7 @@ import { generateJoinCode } from '../lib/joinCode'
 import { canJoinWithCode } from '../lib/tripPermissions'
 import { reorderActivities, moveActivityToDay } from '../lib/activities'
 import { buildDays } from '../lib/days'
-import { pickNewer, preserveUnsyncedPhotos } from '../lib/mergeRemote'
+import { mergeTripContent } from '../lib/mergeTrips'
 import { remapMemberId } from '../lib/memberIdentity'
 import type { SyncState } from '../lib/syncState'
 import type { Lang } from '../i18n'
@@ -201,7 +201,11 @@ interface State {
    * `force` means "this device has no unpushed changes", so the cloud copy is
    * adopted without consulting the (client-clock based) `updatedAt` stamps.
    */
-  applyRemoteTrip: (trip: Trip, force?: boolean) => void
+  /**
+   * Merge a trip received from the cloud into the local copy. Content is
+   * unioned, never replaced — see `lib/mergeTrips`.
+   */
+  applyRemoteTrip: (trip: Trip) => void
   /** Record the cloud bookkeeping fields after a successful push. */
   markTripPushed: (tripId: string, updatedAt: number, memberUids: string[]) => void
 }
@@ -250,6 +254,18 @@ function editTrip(trips: Trip[], tripId: string, fn: (t: Trip) => Trip): Trip[] 
 
 function mapDays(trip: Trip, dayId: string, fn: (d: Day) => Day): Trip {
   return { ...trip, days: trip.days.map((d) => (d.id === dayId ? fn(d) : d)) }
+}
+
+/**
+ * Record that `id` was deliberately deleted.
+ *
+ * Merging unions content instead of replacing it, so a missing entity is read
+ * as "the other device hasn't seen it yet", never as "delete it". A real delete
+ * therefore has to say so out loud — that is what this tombstone is. Without
+ * one, deleting an activity would simply undo itself on the next sync.
+ */
+function tombstone(trip: Trip, id: string): Trip {
+  return { ...trip, deleted: { ...(trip.deleted ?? {}), [id]: Date.now() } }
 }
 
 /** Map one group inside a trip's checklist. */
@@ -450,7 +466,10 @@ export const useStore = create<State>()(
       deleteActivity: (tripId, dayId, activityId) =>
         set((s) => ({
           trips: editTrip(s.trips, tripId, (t) =>
-            mapDays(t, dayId, (d) => ({ ...d, activities: d.activities.filter((a) => a.id !== activityId) })),
+            tombstone(
+              mapDays(t, dayId, (d) => ({ ...d, activities: d.activities.filter((a) => a.id !== activityId) })),
+              activityId,
+            ),
           ),
         })),
 
@@ -482,7 +501,10 @@ export const useStore = create<State>()(
       deleteEntry: (tripId, dayId, entryId) =>
         set((s) => ({
           trips: editTrip(s.trips, tripId, (t) =>
-            mapDays(t, dayId, (d) => ({ ...d, entries: d.entries.filter((e) => e.id !== entryId) })),
+            tombstone(
+              mapDays(t, dayId, (d) => ({ ...d, entries: d.entries.filter((e) => e.id !== entryId) })),
+              entryId,
+            ),
           ),
         })),
 
@@ -516,14 +538,20 @@ export const useStore = create<State>()(
       rejectPhoto: (tripId, dayId, photoId) =>
         set((s) => ({
           trips: editTrip(s.trips, tripId, (t) =>
-            mapDays(t, dayId, (d) => ({ ...d, photos: d.photos.filter((p) => p.id !== photoId) })),
+            tombstone(
+              mapDays(t, dayId, (d) => ({ ...d, photos: d.photos.filter((p) => p.id !== photoId) })),
+              photoId,
+            ),
           ),
         })),
 
       deletePhoto: (tripId, dayId, photoId) =>
         set((s) => ({
           trips: editTrip(s.trips, tripId, (t) =>
-            mapDays(t, dayId, (d) => ({ ...d, photos: d.photos.filter((p) => p.id !== photoId) })),
+            tombstone(
+              mapDays(t, dayId, (d) => ({ ...d, photos: d.photos.filter((p) => p.id !== photoId) })),
+              photoId,
+            ),
           ),
         })),
 
@@ -677,7 +705,7 @@ export const useStore = create<State>()(
           return { members: [...byId.values()] }
         }),
 
-      applyRemoteTrip: (trip, force) =>
+      applyRemoteTrip: (trip) =>
         set((s) => {
           if (!trip?.id) return {}
           const local = s.trips.find((t) => t.id === trip.id)
@@ -685,18 +713,20 @@ export const useStore = create<State>()(
             const order = s.trips.reduce((mx, x) => Math.max(mx, x.order), -1) + 1
             return { trips: [...s.trips, { ...trip, order: trip.order ?? order }] }
           }
-          // Nothing local to protect → the cloud wins, whatever the clocks say.
-          const winner = force ? trip : pickNewer(local, trip)
-          if (!winner || winner === local) {
-            // Local content wins, but always absorb the cloud's membership set.
-            return { trips: mapTrip(s.trips, trip.id, (t) => ({ ...t, memberUids: trip.memberUids ?? t.memberUids })) }
-          }
-          // Keep the local ordering — `order` is a per-device presentation choice.
-          // `preserveUnsyncedPhotos` guarantees that adopting the remote copy can
-          // never drop photos this device has not uploaded yet (they would then
-          // be deleted from the cloud on the next push, i.e. lost for good).
-          const merged = preserveUnsyncedPhotos(local, trip)
-          return { trips: mapTrip(s.trips, trip.id, () => ({ ...merged, order: local.order })) }
+          // CONTENT IS MERGED, NEVER REPLACED.
+          //
+          // This used to pick a winner and discard the loser wholesale, which is
+          // how an older copy of a trip erased a week of planning: it arrived
+          // with a fresh stamp and simply overwrote days and activities it had
+          // never heard of. `mergeTripContent` unions days, activities, entries
+          // and photos, so an old copy can add but never subtract, and honours
+          // tombstones so deliberate deletes still propagate. Only conflicting
+          // edits to the SAME field fall back to last-write-wins.
+          //
+          // `force` (nothing local to protect) still merges rather than replaces
+          // — the union is a superset of what adoption would have produced.
+          const merged = mergeTripContent(local, trip)
+          return { trips: mapTrip(s.trips, trip.id, () => merged) }
         }),
 
       markTripPushed: (tripId, updatedAt, memberUids) =>

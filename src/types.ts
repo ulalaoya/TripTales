@@ -178,4 +178,14 @@ export interface Trip {
   memberUids?: string[]
   /** Cloud only: last-write-wins stamp (ms). Absent in pure local mode. */
   updatedAt?: number
+  /**
+   * Ids of activities, entries and photos that were deliberately DELETED, each
+   * mapped to when (ms).
+   *
+   * Merging unions content rather than replacing it, so an older copy of a trip
+   * can never delete newer work simply by not knowing about it (see
+   * `lib/mergeTrips`). Deletes therefore have to be stated explicitly: this is
+   * how "I removed this" is distinguished from "I never had this".
+   */
+  deleted?: Record<string, number>
 }

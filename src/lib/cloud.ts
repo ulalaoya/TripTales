@@ -17,7 +17,10 @@
  *     cloud), and the local update stays fully optimistic — the UI never waits.
  *   • PULL — `onSnapshot` on `trips where memberUids array-contains myUid`,
  *     plus one snapshot per trip's `photos` subcollection. Incoming documents
- *     are merged last-write-wins on `updatedAt` (see `mergeRemote.pickNewer`).
+ *     are MERGED, not replaced: days, activities, entries and photos are
+ *     unioned by id and deletes travel as tombstones, so an older copy can add
+ *     but never subtract (see `mergeTrips.mergeTripContent`). Only conflicting
+ *     edits to the same field fall back to last-write-wins on `updatedAt`.
  *
  * ── Identity ───────────────────────────────────────────────────────────────
  * Auth is Firebase ANONYMOUS auth. The visible login flow is unchanged (type an
@@ -703,15 +706,13 @@ function mergeTrip(tripId: string): void {
   // snapshot either (another device of the same person still lists it).
   if (useStore.getState().leftTripIds.includes(tripId)) return
 
-  const local = useStore.getState().trips.find((t) => t.id === tripId)
-  const localIsClean =
-    !!local && tripSignature(tripToDoc(local, local.memberUids ?? [])) === tripSignatures.get(tripId)
+  useStore.getState().applyRemoteTrip(trip)
 
-  useStore.getState().applyRemoteTrip(trip, localIsClean)
-
-  // Record the REMOTE signatures: if the merge kept the local copy (because it
-  // was newer) the signatures will differ and the watcher pushes it, which is
-  // exactly right. If the remote copy won, they match and nothing echoes back.
+  // Record the REMOTE signatures, not the merged ones. The merge is a union, so
+  // whenever it added anything the local copy now differs from what the cloud
+  // holds — the signatures disagree, the watcher pushes, and the other devices
+  // receive what this one was holding. When the remote copy already contained
+  // everything, they match and nothing echoes back.
   tripSignatures.set(tripId, tripSignature(tripToDoc(trip, trip.memberUids ?? [])))
   for (const p of photosOfTrip(trip)) photoSignatures.set(`${tripId}/${p.id}`, photoSignature(p))
 }

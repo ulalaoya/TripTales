@@ -103,3 +103,47 @@ describe('docToTrip', () => {
     expect(docToTrip(tripToDoc(t, ['uid-a']), photosOfTrip(t))).toStrictEqual(t);
   });
 });
+
+describe('tombstones survive the round trip', () => {
+  // Deletes only propagate if `deleted` actually reaches the cloud and comes
+  // back. `dropNulls` strips null fields on the way in, so an empty map must
+  // not be mistaken for a lost one.
+  it('carries trip.deleted out to the document and back', () => {
+    const trip = {
+      id: 't1',
+      name: 'גליל',
+      startDate: '2026-08-10',
+      endDate: '2026-08-10',
+      transport: 'car',
+      order: 0,
+      members: [],
+      joinCode: 'ABC123',
+      checklist: [],
+      days: [{ id: 'd1', date: '2026-08-10', title: 'יום', activities: [], entries: [], photos: [] }],
+      deleted: { 'a-1': 1712345678000 },
+    } as unknown as Parameters<typeof tripToDoc>[0]
+
+    const doc = tripToDoc(trip, ['u1'])
+    expect((doc as { deleted?: unknown }).deleted).toEqual({ 'a-1': 1712345678000 })
+
+    const back = docToTrip(doc, [])
+    expect(back.deleted).toEqual({ 'a-1': 1712345678000 })
+  })
+
+  it('leaves an absent map absent rather than inventing one', () => {
+    const trip = {
+      id: 't1',
+      name: 'גליל',
+      startDate: '2026-08-10',
+      endDate: '2026-08-10',
+      transport: 'car',
+      order: 0,
+      members: [],
+      joinCode: 'ABC123',
+      checklist: [],
+      days: [],
+    } as unknown as Parameters<typeof tripToDoc>[0]
+
+    expect(docToTrip(tripToDoc(trip, ['u1']), []).deleted).toBeUndefined()
+  })
+})
