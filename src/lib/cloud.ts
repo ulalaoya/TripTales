@@ -39,6 +39,7 @@ import { getCloudSdk, isCloudEnabled, type Db, type FsApi } from './firebase'
 import { useStore } from '../store/useStore'
 import { docToTrip, memberUidsOfDoc, photosOfTrip, tripToDoc, type PhotoDoc } from './firestoreMap'
 import { withinFirestoreLimit } from './imageSize'
+import { compressToFit } from './compressImage'
 import { normalizeJoinCode } from './joinCode'
 import { normalizePhone } from './phone'
 import { phoneHash } from './phoneHash'
@@ -75,6 +76,13 @@ let pushTimer: ReturnType<typeof setTimeout> | null = null
 let flushing = false
 let flushAgain = false
 let warnedTooBig = false
+/**
+ * Photos this session could not shrink into the document budget. Skipping them
+ * for the rest of the session avoids re-encoding a stubborn image on every
+ * flush; clearing it on `cloudStop` means the next run tries again, because the
+ * usual cause is a transient canvas failure rather than the image itself.
+ */
+const unshrinkable = new Set<string>()
 
 // --- Diagnostics (see `cloudDiagnostics`) ---------------------------------
 /**
@@ -272,6 +280,7 @@ export function cloudStop(): void {
   pushTimer = null
   started = false
   warnedTooBig = false
+  unshrinkable.clear()
   tripsSnapshotSeen = false
   firstSnapshotResolve = null
   myUid = null
@@ -839,24 +848,42 @@ async function pushTrip(
     const signature = photoSignature(photo)
     if (photoSignatures.get(key) === signature) continue
 
+    let toWrite = photo
     const src = typeof photo.src === 'string' ? photo.src : ''
     if (src && !withinFirestoreLimit(src)) {
-      // Too big for one Firestore document: keep it local, say so once.
-      if (!warnedTooBig) {
-        warnedTooBig = true
-        useStore.getState().showToast(str('syncPhotoTooBig'))
+      // TOO BIG FOR ONE FIRESTORE DOCUMENT.
+      //
+      // This used to give up: mark the photo "handled" and move on, which meant
+      // it was never retried and never left the device. Nine of ten photos from
+      // a real trip lived and died on one phone that way, with the family
+      // seeing nothing. So shrink it here instead — and write the smaller copy
+      // back into the store, so the device also stops hoarding megabytes it can
+      // never share.
+      if (unshrinkable.has(key)) continue
+      const shrunk = await compressToFit(src, withinFirestoreLimit)
+      if (!shrunk) {
+        // Retry on the next run rather than never: this is usually a transient
+        // canvas failure, not a property of the image.
+        unshrinkable.add(key)
+        if (!warnedTooBig) {
+          warnedTooBig = true
+          useStore.getState().showToast(str('syncPhotoTooBig'))
+        }
+        continue
       }
-      photoSignatures.set(key, signature)
-      continue
+      useStore.getState().replacePhotoSrc(trip.id, photo.dayId, photo.id, shrunk)
+      toWrite = { ...photo, src: shrunk }
     }
 
     setState('syncing')
     try {
       await fs.setDoc(fs.doc(db, 'trips', trip.id, 'photos', photo.id), {
-        ...photo,
+        ...toWrite,
         updatedAt: fs.serverTimestamp(),
       })
-      photoSignatures.set(key, signature)
+      // Signature of what was ACTUALLY written — a compressed photo has a
+      // different src, and stamping the original would re-upload it forever.
+      photoSignatures.set(key, photoSignature(toWrite))
       wrote = true
     } catch (err) {
       reportFailure(err, false)

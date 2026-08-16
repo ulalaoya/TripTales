@@ -167,6 +167,13 @@ interface State {
   rejectPhoto: (tripId: string, dayId: string, photoId: string) => void
   /** Remove a photo (any status) — used by the album/planner delete control. */
   deletePhoto: (tripId: string, dayId: string, photoId: string) => void
+  /**
+   * Swap a photo's image data for a smaller encoding of the same picture.
+   * Used by the sync layer when a photo is too large for one Firestore
+   * document: the compressed copy replaces the original locally too, so the
+   * device stops carrying megabytes it can never share.
+   */
+  replacePhotoSrc: (tripId: string, dayId: string, photoId: string, src: string) => void
   toggleFav: (tripId: string, dayId: string, photoId: string) => void
 
   reactEntry: (tripId: string, dayId: string, entryId: string, emoji: string, memberId: string) => void
@@ -517,6 +524,16 @@ export const useStore = create<State>()(
         set((s) => ({
           trips: editTrip(s.trips, tripId, (t) =>
             mapDays(t, dayId, (d) => ({ ...d, photos: d.photos.filter((p) => p.id !== photoId) })),
+          ),
+        })),
+
+      replacePhotoSrc: (tripId, dayId, photoId, src) =>
+        set((s) => ({
+          trips: editTrip(s.trips, tripId, (t) =>
+            mapDays(t, dayId, (d) => ({
+              ...d,
+              photos: d.photos.map((p) => (p.id === photoId ? { ...p, src } : p)),
+            })),
           ),
         })),
 

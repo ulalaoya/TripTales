@@ -21,6 +21,8 @@ import { useStore, useCurrentMember } from '../store/useStore'
 import { useT } from '../i18n/useT'
 import { locationHref, locationLabel } from '../lib/locationLink'
 import { canPlanTrip, isTripMember } from '../lib/tripPermissions'
+import { isCloudEnabled } from '../lib/firebase'
+import { compressDataUrl } from '../lib/compressImage'
 import { dayTabLabel, weekdayParts } from '../lib/dayFormat'
 import { sortActivitiesByTime } from '../lib/sortActivities'
 import { initialDayIndex, todayISO } from '../lib/tripSelect'
@@ -256,13 +258,20 @@ export function TripView() {
             <DayPhotoButton
               t={t}
               onPick={(dataUrl) => {
-                const status = addPhoto(
-                  trip.id,
-                  day.id,
-                  { src: dataUrl, caption: '', by: member.id },
-                  member.role,
-                )
-                showToast(status === 'pending' ? t('sentForApproval') : t('momentSaved'))
+                // Downscale first, as `Moment` and `TripSettings` do. This path
+                // used to store the camera's original bytes, so every photo
+                // added here was too large to sync and never left the device.
+                const store = (src: string) => {
+                  const status = addPhoto(
+                    trip.id,
+                    day.id,
+                    { src, caption: '', by: member.id },
+                    member.role,
+                  )
+                  showToast(status === 'pending' ? t('sentForApproval') : t('momentSaved'))
+                }
+                if (isCloudEnabled) compressDataUrl(dataUrl).then(store).catch(() => store(dataUrl))
+                else store(dataUrl)
               }}
             />
           )}

@@ -12,8 +12,23 @@
  * resolves with the ORIGINAL data URL so a photo is never lost to compression.
  */
 
-export const MAX_EDGE = 1000
-export const JPEG_QUALITY = 0.6
+export const MAX_EDGE = 1600
+export const JPEG_QUALITY = 0.72
+
+/**
+ * Successively harder squeezes, tried in order until one fits the budget.
+ *
+ * The first rung is the target: 1600 px at q0.72 is a photo you can open full
+ * screen on a phone and enjoy — NOT a thumbnail — and lands around 250–400 KB,
+ * comfortably inside Firestore's per-document ceiling. The lower rungs exist
+ * only for the occasional panorama that refuses to fit.
+ */
+const LADDER: ReadonlyArray<readonly [number, number]> = [
+  [1600, 0.72],
+  [1280, 0.65],
+  [1000, 0.55],
+  [800, 0.45],
+]
 
 /** Scale (w, h) down so the long edge is at most `maxEdge`. Never scales up. */
 export function fitWithin(
@@ -82,4 +97,32 @@ export function compressDataUrl(
     setTimeout(() => done(dataUrl), 8000)
     img.src = dataUrl
   })
+}
+
+/**
+ * Squeeze `dataUrl` until `fits` accepts it, trying each rung of the ladder in
+ * turn. Resolves with the first result that fits, or `null` when even the
+ * harshest setting cannot get there (a corrupt image, or a canvas that refused
+ * to encode — `compressDataUrl` hands back its input in both cases).
+ *
+ * WHY IT LIVES AT THE SYNC BOUNDARY, not only at upload: photos added before
+ * compression existed — or through a code path that forgot to call it — were
+ * silently skipped by the uploader FOREVER, because an over-budget photo was
+ * marked as "handled" and never revisited. Nine of ten photos from a real trip
+ * were stranded on one phone that way. Compressing here heals them without the
+ * user re-uploading anything, and covers any upload path added later.
+ */
+export async function compressToFit(
+  dataUrl: string,
+  fits: (candidate: string) => boolean,
+  // Injectable so the ladder can be tested without a canvas: jsdom has `Image`
+  // but never fires `onload`, so the real encoder only ever hits its timeout.
+  encode: (src: string, edge: number, quality: number) => Promise<string> = compressDataUrl,
+): Promise<string | null> {
+  if (fits(dataUrl)) return dataUrl
+  for (const [edge, quality] of LADDER) {
+    const candidate = await encode(dataUrl, edge, quality)
+    if (candidate !== dataUrl && fits(candidate)) return candidate
+  }
+  return null
 }
